@@ -2614,8 +2614,7 @@ print(doc, target = 'logbook_resultats_complets.docx')
 
 
 
-
-
+#enregistrer sur github
 # Chemin complet du fichier
 fichier <- "/Users/thomashusson/Documents/R/Logbook/script logbook complet pour SFCD.R"
 
@@ -2632,3 +2631,28 @@ system(paste("git commit -m", shQuote(message_commit)))
 # Étape 3 : push vers GitHub
 system("git push")
 
+
+
+
+
+
+#télécharger depuis github
+# Nom du fichier dans le dépôt GitHub
+nom_fichier <- "script logbook complet pour SFCD.R"
+
+# Encoder le nom du fichier pour l'URL
+nom_fichier_url <- utils::URLencode(nom_fichier)
+
+# Construire l'URL brute sur GitHub (branche main)
+url_github <- paste0(
+  "https://raw.githubusercontent.com/thomashusson29/logbook/main/",
+  nom_fichier_url
+)
+
+# Dossier de destination (Téléchargements macOS)
+destination <- file.path("~/Downloads", nom_fichier)
+
+# Télécharger
+download.file(url = url_github, destfile = destination, mode = "wb")
+
+cat("✅ Fichier téléchargé dans : ", destination, "\n")
