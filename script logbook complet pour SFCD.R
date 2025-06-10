@@ -1,6 +1,59 @@
 #tout supprimer
 rm(list=ls())
 
+
+
+#enregistrer sur github
+# Chemin complet du fichier
+fichier <- "/Users/thomashusson/Documents/R/Logbook/script logbook complet pour SFCD.R"
+
+# Aller dans le dossier Git (le projet Logbook)
+setwd("/Users/thomashusson/Documents/R/Logbook")
+
+# Étape 1 : ajouter le fichier
+system(paste("git add", shQuote(fichier)))
+
+# Étape 2 : commit avec message explicite
+message_commit <- "Mise à jour du script logbook complet pour SFCD"
+system(paste("git commit -m", shQuote(message_commit)))
+
+# Étape 3 : push vers GitHub
+system("git push")
+
+
+
+
+# Nom du fichier sur GitHub
+nom_fichier <- "script logbook complet pour SFCD.R"
+
+# Encoder pour URL (gère les espaces)
+nom_fichier_url <- utils::URLencode(nom_fichier)
+
+# URL brute du fichier sur GitHub (branche main)
+url_github <- paste0(
+  "https://raw.githubusercontent.com/thomashusson29/logbook/main/",
+  nom_fichier_url
+)
+
+# Chemin de destination local (Téléchargements)
+destination <- file.path("~/Downloads", nom_fichier)
+
+# Télécharger le fichier
+download.file(url = url_github, destfile = destination, mode = "wb")
+
+# Message de confirmation
+cat("✅ Fichier téléchargé dans : ", destination, "\n")
+
+# Ouvrir dans RStudio (si RStudio en cours)
+if (requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
+  rstudioapi::navigateToFile(destination)
+} else {
+  cat("ℹ️ RStudio API non disponible — fichier non ouvert automatiquement.\n")
+}
+
+
+
+
 # Installation des packages nécessaires
 install.packages(c(
   "cardx", "dplyr", "readxl", "openxlsx", "tidyverse", "gtsummary", 
