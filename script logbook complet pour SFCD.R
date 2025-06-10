@@ -2608,3 +2608,27 @@ doc <- add_df_table(doc, "Probabilité prédite de geste (modèle logistique tem
 # ---- SAUVEGARDE FINALE ----
 print("Export terminé. Enregistrez avec :")
 print(doc, target = 'logbook_resultats_complets.docx')
+
+
+
+
+
+
+
+
+# Chemin complet du fichier
+fichier <- "/Users/thomashusson/Documents/R/Logbook/script logbook complet pour SFCD.R"
+
+# Aller dans le dossier Git (le projet Logbook)
+setwd("/Users/thomashusson/Documents/R/Logbook")
+
+# Étape 1 : ajouter le fichier
+system(paste("git add", shQuote(fichier)))
+
+# Étape 2 : commit avec message explicite
+message_commit <- "Mise à jour du script logbook complet pour SFCD"
+system(paste("git commit -m", shQuote(message_commit)))
+
+# Étape 3 : push vers GitHub
+system("git push")
+
