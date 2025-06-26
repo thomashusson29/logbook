@@ -54,6 +54,66 @@ if (requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable())
 
 
 
+
+
+
+#tout supprimer
+rm(list=ls())
+
+
+
+#enregistrer sur github depuis macbook claire
+system("git remote add origin https://github.com/thomashusson29/logbook.git")
+
+# Chemin vers ton fichier
+fichier <- "/Users/thomashusson/Documents/R/Logbook/script logbook complet pour SFCD.R"
+
+# Aller dans le dossier Git (le projet Logbook)
+setwd("/Users/thomashusson/Documents/R/Logbook")
+
+# Étape 1 : Ajouter le fichier
+system(paste("git add", shQuote(fichier)))
+
+# Étape 2 : Commit avec message explicite
+message_commit <- "Mise à jour du script logbook complet pour SFCD"
+system(paste("git commit -m", shQuote(message_commit)))
+
+# Étape 3 : Push avec définition de la branche de suivi si nécessaire
+system("git push --set-upstream origin main")
+
+
+
+# Nom du fichier sur GitHub
+nom_fichier <- "script logbook complet pour SFCD.R"
+
+# Encoder pour URL (gère les espaces)
+nom_fichier_url <- utils::URLencode(nom_fichier)
+
+# URL brute du fichier sur GitHub (branche main)
+url_github <- paste0(
+  "https://raw.githubusercontent.com/thomashusson29/logbook/main/",
+  nom_fichier_url
+)
+
+# Chemin de destination local (Téléchargements)
+destination <- file.path("~/Downloads", nom_fichier)
+
+# Télécharger le fichier
+download.file(url = url_github, destfile = destination, mode = "wb")
+
+# Message de confirmation
+cat("✅ Fichier téléchargé dans : ", destination, "\n")
+
+# Ouvrir dans RStudio (si RStudio en cours)
+if (requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
+  rstudioapi::navigateToFile(destination)
+} else {
+  cat("ℹ️ RStudio API non disponible — fichier non ouvert automatiquement.\n")
+}
+
+
+
+
 # Installation des packages nécessaires
 install.packages(c(
   "cardx", "dplyr", "readxl", "openxlsx", "tidyverse", "gtsummary", 
@@ -314,6 +374,9 @@ ggplot(df_plot_garde, aes(x = Garde_Programme, y = n, fill = group)) +
   ) +
   theme_minimal(base_size = 13) +
   theme(legend.position = "none")
+
+ggsave("gestes_par_annee_DES.svg", plot = gestes_par_année, width = 10, height = 6)
+
 
 
 library(gtsummary)
@@ -746,7 +809,7 @@ df_geste_socle_plot <- df %>%
   )
 
 # Bar plot
-ggplot(df_geste_socle_plot, aes(x = groupe_socle, y = n, fill = Geste)) +
+geste_socle_plot <- ggplot(df_geste_socle_plot, aes(x = groupe_socle, y = n, fill = Geste)) +
   geom_bar(stat = "identity", position = "dodge", width = 0.6) +
   geom_text(aes(label = label), position = position_dodge(width = 0.6), vjust = -0.5, size = 5) +
   scale_fill_manual(values = c("Yes" = "#A3F4A3", "No" = "#F4A3A3")) +
@@ -758,39 +821,67 @@ ggplot(df_geste_socle_plot, aes(x = groupe_socle, y = n, fill = Geste)) +
   ) +
   theme_minimal(base_size = 14)
 
+geste_socle_plot
 
-
-
+ggsave("geste_socle_plot.svg", plot = geste_socle_plot, width = 14, height = 10)
 
 library(dplyr)
 library(ggplot2)
+library(stringr)
 
-df_geste_detail <- df %>%
-  filter(!is.na(QUEL_GESTE_0No_1paroi_2dissection_3anastomose_4Tout), !is.na(Geste)) %>%
-  group_by(QUEL_GESTE_0No_1paroi_2dissection_3anastomose_4Tout) %>%
+# Étape 1 : Recode geste majoritaire
+df <- df %>%
+  mutate(
+    geste_majoritaire = case_when(
+      str_detect(QUEL_GESTE_0No_1paroi_2dissection_3anastomose_4Tout, "Tout") ~ "Tout",
+      str_detect(QUEL_GESTE_0No_1paroi_2dissection_3anastomose_4Tout,
+                 regex("Dissection|Canule VMI|Libération foie droit|Controle de l'aorte|Temps froid|Temps chaud|Cholécystectomie|APC|Pédicule", ignore_case = TRUE)) ~ "Dissection",
+      str_detect(QUEL_GESTE_0No_1paroi_2dissection_3anastomose_4Tout,
+                 regex("Anastomose|Bilio biliaire|Biliodig", ignore_case = TRUE)) ~ "Anastomose",
+      str_detect(QUEL_GESTE_0No_1paroi_2dissection_3anastomose_4Tout,
+                 regex("Paroi|Fermeture aponévrose|Incision|Ouverture|Fixation prothèse|Pose de PAC|Stomie", ignore_case = TRUE)) ~ "Paroi",
+      TRUE ~ "Rien"
+    )
+  )
+
+# Étape 2 : Résumé
+n_total <- sum(df$Geste %in% c("Yes"), na.rm = TRUE)
+
+df_resume <- df %>%
+  filter(!is.na(geste_majoritaire), Geste == "Yes") %>%
+  group_by(geste_majoritaire) %>%
   summarise(
-    total = n(),
-    gestes_realises = sum(Geste == "Yes"),
-    pourcentage = round(100 * gestes_realises / total, 1),
-    label = paste0(gestes_realises, "/", total, " (", pourcentage, "%)")
+    gestes_realises = n(),
+    .groups = "drop"
   ) %>%
-  arrange(total)
+  filter(geste_majoritaire != "Rien") %>%
+  mutate(
+    total = n_total,
+    pourcentage = 100 * gestes_realises / total,
+    label = paste0(gestes_realises, "/", total, " (", round(pourcentage, 1), "%)"),
+    geste_majoritaire = factor(geste_majoritaire, levels = c("Tout", "Dissection", "Anastomose", "Paroi"))
+  )
 
-# Bar plot horizontal
-ggplot(df_geste_detail, aes(x = reorder(QUEL_GESTE_0No_1paroi_2dissection_3anastomose_4Tout, total), y = total)) +
-  geom_bar(stat = "identity", fill = "grey90", width = 0.7) +
-  geom_bar(aes(y = gestes_realises, fill = QUEL_GESTE_0No_1paroi_2dissection_3anastomose_4Tout),
-           stat = "identity", width = 0.7) +
-  geom_text(aes(y = gestes_realises + 1, label = label), hjust = 0, size = 4.5) +
+df_resume <- df_resume %>%
+  mutate(geste_majoritaire = factor(geste_majoritaire, levels = rev(c("Tout", "Dissection", "Anastomose", "Paroi"))))
+
+
+# Étape 3 : Bar plot horizontal batterie
+ggplot(df_resume, aes(x = geste_majoritaire)) +
+  geom_col(aes(y = total), fill = "grey85", width = 0.7) +  # fond fixe
+  geom_col(aes(y = gestes_realises, fill = geste_majoritaire), width = 0.7, show.legend = FALSE) +
+  geom_text(aes(y = gestes_realises + 5, label = label), hjust = 0, size = 5.5) +
   coord_flip() +
-  scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
   labs(
-    title = "Nombre de gestes réalisés selon le type de geste déclaré",
-    x = "Type de geste",
-    y = "Nombre total d'interventions"
+    title = "Part des gestes réalisés par type, rapportée à toutes les interventions",
+    x = "Geste le plus élevé",
+    y = "Nombre d’interventions"
   ) +
-  theme_minimal(base_size = 13) +
-  theme(legend.position = "none")
+  theme_minimal(base_size = 14)
+
+
+
 
 
 
@@ -1150,6 +1241,27 @@ tbl_garde_geste_socle <- df_garde_socle %>%
 
 tbl_garde_geste_socle
 
+df_programme_socle <- df %>%
+  filter(
+    Garde_Programme == "Programmé",
+    !is.na(phase),
+    !is.na(Geste)
+  )
+
+tbl_programme_geste_socle <- df_programme_socle %>%
+  tbl_summary(
+    by = phase,
+    include = Geste,
+    statistic = all_categorical() ~ "{n} ({p}%)",
+    missing = "no"
+  ) %>%
+  add_p() %>%
+  modify_header(label = "**Geste réalisé en programmé**") %>%
+  bold_labels() %>%
+  italicize_levels()
+
+tbl_programme_geste_socle
+
 
 library(dplyr)
 library(ggplot2)
@@ -1169,7 +1281,17 @@ df_bar <- df %>%
     group = paste(phase, Garde_Programme, sep = " - ")
   )
 
-ggplot(df_bar, aes(x = group, y = taux_yes, fill = group)) +
+# Créer un facteur avec l'ordre voulu
+df_bar <- df_bar %>%
+  mutate(
+    group = factor(group, levels = c(
+      "socle - Garde", "socle - Programmé",
+      "pas socle - Garde", "pas socle - Programmé"
+    ))
+  )
+
+# Bar plot modifié
+geste_socle_garde_plot <- ggplot(df_bar, aes(x = group, y = taux_yes, fill = group)) +
   geom_bar(stat = "identity", width = 0.6) +
   geom_text(aes(label = label), vjust = -0.5, size = 5) +
   scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
@@ -1179,16 +1301,32 @@ ggplot(df_bar, aes(x = group, y = taux_yes, fill = group)) +
     "pas socle - Programmé" = "#b2df8a",
     "pas socle - Garde" = "#33a02c"
   )) +
+  scale_x_discrete(labels = c(
+    "socle - Garde" = "Garde\nSocle",
+    "socle - Programmé" = "Programmé\nSocle",
+    "pas socle - Garde" = "Garde\nNon socle",
+    "pas socle - Programmé" = "Programmé\nNon socle"
+  )) +
   labs(
     title = "Taux de gestes réalisés selon phase et type d’intervention",
-    x = "Groupe",
+    x = NULL,
     y = "Taux de gestes réalisés (Yes)",
     fill = NULL
   ) +
   theme_minimal(base_size = 14) +
-  theme(legend.position = "none")
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(size = 20)  # Augmenter ici la taille
+  )
+
+# Affichage
+geste_socle_garde_plot
 
 
+ggsave("geste_socle_garde_plot.png", plot = geste_socle_garde_plot, width = 14, height = 10)
+
+
+# ---------- Données pour plot1 (Programmé vs Garde uniquement) ----------
 df_age_geste_gp <- df %>%
   filter(!is.na(annee_DES), !is.na(Geste), !is.na(Garde_Programme)) %>%
   group_by(annee_DES, Garde_Programme) %>%
@@ -1200,21 +1338,109 @@ df_age_geste_gp <- df %>%
   ) %>%
   mutate(label_pct = paste0(round(100 * taux_yes, 1), "%"))
 
-ggplot(df_age_geste_gp, aes(x = annee_DES, y = taux_yes, color = Garde_Programme)) +
+# ---------- Données pour plot2 (ajout de "Tout confondu") ----------
+df_tout <- df %>%
+  filter(!is.na(annee_DES), !is.na(Geste)) %>%
+  group_by(annee_DES) %>%
+  summarise(
+    total = n(),
+    n_yes = sum(Geste == "Yes"),
+    taux_yes = n_yes / total,
+    .groups = "drop"
+  ) %>%
+  mutate(Garde_Programme = "Tout confondu")
+
+df_combined <- bind_rows(df_age_geste_gp, df_tout) %>%
+  mutate(label_pct = paste0(round(100 * taux_yes, 1), "%"))
+
+# ---------- Plot 1 : Garde vs Programmé ----------
+plot1 <- ggplot(df_age_geste_gp, aes(x = annee_DES, y = taux_yes, color = Garde_Programme)) +
   geom_line(size = 1.5) +
   geom_point(size = 3) +
   geom_text(aes(label = label_pct), vjust = -0.8, size = 5) +
   scale_x_continuous(breaks = 1:4, labels = paste0("Année ", 1:4)) +
   scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
-  scale_color_manual(values = c("Programmé" = "#1f78b4", "Garde" = "#33a02c")) +
+  scale_color_manual(values = c("Programmé" = "#33a02c", "Garde" = "#f74605")) +
   labs(
     title = "Taux de gestes réalisés selon l’année d’internat (DES)",
-    subtitle = "Comparaison entre interventions programmées et gardes",
+    subtitle = "Comparaison entre interventions programmées, gardes et globalement",
     x = "Année d’internat",
     y = "Taux de gestes réalisés (Yes)",
     color = "Type d’intervention"
   ) +
   theme_minimal(base_size = 14)
+plot1
+
+plot2 <- ggplot(df_combined, aes(x = annee_DES, y = taux_yes, color = Garde_Programme)) +
+  geom_line(aes(size = Garde_Programme)) +
+  geom_point(size = 3) +
+  geom_text(
+    aes(label = ifelse(Garde_Programme == "Tout confondu", label_pct, "")),
+    vjust = -0.8,
+    size = 5
+  ) +
+  scale_x_continuous(breaks = 1:4, labels = paste0("Année ", 1:4)) +
+  scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
+  scale_color_manual(values = c(
+    "Programmé" = "#9cdb97",
+    "Garde" = "#f7906a",
+    "Tout confondu" = "#3848ab"
+  )) +
+  scale_size_manual(values = c(
+    "Programmé" = 1.5,
+    "Garde" = 1.5,
+    "Tout confondu" = 2.8   # plus épais
+  )) +
+  labs(
+    title = "Taux de gestes réalisés selon l’année d’internat (DES)",
+    subtitle = "Comparaison entre interventions programmées, gardes et globalement",
+    x = "Année d’internat",
+    y = "Taux de gestes réalisés (Yes)",
+    color = "Type d’intervention",
+    size = NULL  # supprime la légende pour l'épaisseur
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(legend.key.width = unit(1.5, "cm"))  # espace un peu la légende
+
+# Extraire la droite de régression uniquement pour "Tout confondu"
+plot2 <- ggplot(df_combined, aes(x = annee_DES, y = taux_yes, color = Garde_Programme)) +
+  geom_line(aes(size = Garde_Programme)) +
+  geom_point(size = 3) +
+  geom_text(
+    aes(label = ifelse(Garde_Programme == "Tout confondu", label_pct, "")),
+    vjust = -0.8,
+    size = 5
+  ) +
+  annotate("text", x = 4, y = 0.02, label = "p = 0.10", size = 5, hjust = 1, color = "black") +
+  scale_x_continuous(breaks = 1:4, labels = paste0("Année ", 1:4)) +
+  scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
+  scale_color_manual(values = c(
+    "Programmé" = "#9cdb97",
+    "Garde" = "#f7906a",
+    "Tout confondu" = "#3848ab"
+  )) +
+  scale_size_manual(values = c(
+    "Programmé" = 1.5,
+    "Garde" = 1.5,
+    "Tout confondu" = 2.8
+  )) +
+  labs(
+    title = "Taux de gestes réalisés selon l’année d’internat (DES)",
+    subtitle = "Comparaison entre interventions programmées, gardes et globalement",
+    x = "Année d’internat",
+    y = "Taux de gestes réalisés (Yes)",
+    color = "Type d’intervention",
+    size = NULL
+  ) +
+  theme_minimal(base_size = 14)
+
+
+plot2
+
+ggsave("plot1_garde_vs_programme.png", plot = plot1, width = 9, height = 5, units = "in", dpi = 300)
+ggsave("plot2_avec_tout_confondu.png", plot = plot2, width = 9, height = 5, units = "in", dpi = 300)
+
+
 
 
 library(lubridate)
@@ -2709,3 +2935,4 @@ destination <- file.path("~/Downloads", nom_fichier)
 download.file(url = url_github, destfile = destination, mode = "wb")
 
 cat("✅ Fichier téléchargé dans : ", destination, "\n")
+
