@@ -2186,618 +2186,58 @@ df %>%
 
 
 #RECODAGE DE TOUTES LES INTERVENTIONS
-library(dplyr)
-library(stringr)
+df$INTERVENTION_GROUPÉE <- NULL
+df$INTERVENTION_GROUPÉE <- NA_character_
 
 
+#BLOC TRANSPLANTATIONS / PMO 
 df <- df %>%
   mutate(
     INTERVENTION_GROUPÉE = case_when(
-      # Bloc général
-      str_detect(INTERVENTION, regex("back ?table", TRUE)) ~ "Back table greffe hépatique",
-      str_detect(INTERVENTION, regex("1er.*ALPPS", TRUE)) ~ "1er temps de ALPPS",
-      str_detect(INTERVENTION, regex("babcock|beaulieu|baulieu", TRUE)) ~ "2e temps colo-anale différée",
-      str_detect(INTERVENTION, regex("recoupe", TRUE)) ~ "2e temps colo-anale différée",
+      # ✅ PMO et Prélèvements multi-organes
+      str_detect(INTERVENTION, regex("PMO|Pr[ée]l[èe]vement.*multi|Pr[ée]l[èe]vement.*organes", ignore_case = TRUE)) ~ "Prélèvement multi-organes",
       
-      # Thyroïde
-      str_detect(INTERVENTION, regex("(^TT$)|thyro[iï]dectomie.*totale|totalisation", TRUE)) ~ "Thyroïdectomie totale",
-      str_detect(INTERVENTION, regex("lobo.*isthmo|loboisthmectomie|lobectomie.*droite|lobectomie.*gauche|isthmectomie", TRUE)) ~ "Loboisthmectomie thyroïdienne",
+      str_detect(INTERVENTION, regex(
+        "kyste.*h[ée]patique|fenestration.*kyste|kystes.*h[ée]patique|kystique",
+        ignore_case = TRUE)) ~ "Fenestration kyste hépatique (coelio)",
       
-      # Stomies
-      str_detect(INTERVENTION, regex("colostomie.*laparo", TRUE)) ~ "Colostomie (laparo)",
-      str_detect(INTERVENTION, regex("colostomie", TRUE)) ~ "Colostomie (coelio)",
-      str_detect(INTERVENTION, regex("iléostomie.*laparo", TRUE)) ~ "Iléostomie (laparo)",
-      str_detect(INTERVENTION, regex("iléostomie", TRUE)) ~ "Iléostomie (coelio)",
+      str_detect(INTERVENTION, regex("re-?h[ée]patectom.*partielle", ignore_case = TRUE)) ~ "Hépatectomie mineure (laparo)",
       
-      # PAC
-      str_detect(INTERVENTION, regex("pose.*pac|pac.*pose", TRUE)) ~ "Pose de PAC",
+      # ✅ Prélèvements foie et pancréas spécifiques
+      str_detect(INTERVENTION, regex("Pr[ée]l[èe]vement.*foie|Pr[ée]l[èe]vement.*h[ée]patique", ignore_case = TRUE)) ~ "Prélèvement hépatique",
+      str_detect(INTERVENTION, regex("Pr[ée]l[èe]vement.*pancr", ignore_case = TRUE)) ~ "Prélèvement pancréatique",
       
-      # Exploration
-      str_detect(INTERVENTION, regex("examen anal|fournier|fesse|fistule anale", TRUE)) ~ "Examen anal",
-      str_detect(INTERVENTION, regex("exérèse P3 gauche|parathyro|4 sites", TRUE)) ~ "Exploration des 4 sites",
-      str_detect(INTERVENTION, regex("laparo.*explo|exploration|bodypacker|corps étranger|fistulisation|laparo.*fistule", TRUE)) ~ "Laparotomie exploratrice",
+      # ✅ Donneur vivant
+      str_detect(INTERVENTION, regex("Donneur vivant.*robot", ignore_case = TRUE)) ~ "Donneur vivant (robot)",
+      str_detect(INTERVENTION, regex("Donneur vivant.*coelio", ignore_case = TRUE)) ~ "Donneur vivant (coelio)",
+      str_detect(INTERVENTION, regex("Donneur vivant|Don vivant|Pmo.*vivant", ignore_case = TRUE)) ~ "Donneur vivant (laparo)",
       
-      # Par défaut
-      TRUE ~ NA_character_
-    )
-  )
-
-df <- df %>%
-  mutate(
-    INTERVENTION_GROUPÉE = case_when(
-      !is.na(INTERVENTION_GROUPÉE) ~ INTERVENTION_GROUPÉE,  # Ne pas écraser les recodages précédents
+      # ✅ Transplantations foie
+      str_detect(INTERVENTION, regex("^TH$|transplantation.*h[ée]patique|re-TH|TH secondaire|TH split", ignore_case = TRUE)) ~ "Transplantation hépatique",
       
-      # Œsophagectomies
-      str_detect(INTERVENTION, regex("lewis.*santy", TRUE)) ~ "Œsophagectomie de Lewis Santy",
-      str_detect(INTERVENTION, regex("3 voies", TRUE)) ~ "Œsophagectomie 3 voies",
+      # ✅ Transplantations pancréas
+      str_detect(INTERVENTION, regex("transplantation.*pancr[ée]atique|TPR|\\bTP\\b", ignore_case = TRUE)) ~ "Transplantation pancréatique",
       
-      # Estomac
-      str_detect(INTERVENTION, regex("gastrectomie", TRUE)) ~ "Gastrectomie totale",
-      str_detect(INTERVENTION, regex("ulcère.*perforé", TRUE)) ~ "Ulcère perforé (coelio)",
+      # ✅ Reprises de transplantation
+      str_detect(INTERVENTION, regex("Reprise.*transplant", ignore_case = TRUE)) ~ "Reprise transplantation",
       
-      # Bypass
-      str_detect(INTERVENTION, regex("bypass|rygb", TRUE)) ~ "Bypass gastrique (coelio)",
-      str_detect(INTERVENTION, regex("reprise.*bypass", TRUE)) ~ "Reprise bypass gastrique",
+      # ✅ Back table
+      str_detect(INTERVENTION, regex("Back.*Table", ignore_case = TRUE)) ~ "Back table greffe hépatique",
       
-      # Sleeve
-      str_detect(INTERVENTION, regex("sleeve", TRUE)) ~ "Sleeve gastrectomie (coelio)",
+      # ✅ Transplantation hépatique
+      str_detect(INTERVENTION, regex(
+        "transplantation.*h[ée]patique|\\bTH\\b|TH split|Re-TH|reprise.*transplantation.*h[ée]patique|Back Table TH",
+        ignore_case = TRUE)) ~ "Transplantation hépatique",
       
-      # Fundoplicature
-      str_detect(INTERVENTION, regex("fundoplicature|nissen|hernie.*hiatale", TRUE)) ~ "Cure hernie hiatale",
+      # ✅ Transplantation pancréatique
+      str_detect(INTERVENTION, regex(
+        "transplantation.*pancr[ée]as|\\bTP\\b|TPR|Back Table TP-TR|reprise.*transplantation.*pancr[ée]as",
+        ignore_case = TRUE)) ~ "Transplantation pancréatique",
       
-      TRUE ~ NA_character_
-    )
-  )
-
-df <- df %>%
-  mutate(
-    INTERVENTION_GROUPÉE = case_when(
-      !is.na(INTERVENTION_GROUPÉE) ~ INTERVENTION_GROUPÉE,
-      
-      # Transplantations
-      str_detect(INTERVENTION, regex("^TH$|transplantation.*hépatique|re-TH", TRUE)) ~ "Transplantation hépatique",
-      str_detect(INTERVENTION, regex("transplantation.*pancréatique", TRUE)) ~ "Transplantation pancréatique",
-      str_detect(INTERVENTION, regex("reprise.*transplant", TRUE)) ~ "Reprise transplantation",
-      
-      # PMO
-      str_detect(INTERVENTION, regex("pmo.*foie", TRUE)) ~ "Prélèvement hépatique",
-      str_detect(INTERVENTION, regex("pmo.*pancr", TRUE)) ~ "Prélèvement pancréatique",
-      
-      # Donneurs vivants
-      str_detect(INTERVENTION, regex("donneur vivant.*robot", TRUE)) ~ "Donneur vivant (robot)",
-      str_detect(INTERVENTION, regex("donneur vivant.*coelio", TRUE)) ~ "Donneur vivant (coelio)",
-      str_detect(INTERVENTION, regex("donneur vivant|pmo.*vivant", TRUE)) ~ "Donneur vivant (laparo)",
-      
-      # SPG
-      str_detect(INTERVENTION, regex("spg.*robot|pancréatectomie.*gauche.*robot", TRUE)) ~ "SPG (robot)",
-      str_detect(INTERVENTION, regex("spg.*laparo|pancréatectomie.*gauche.*laparo", TRUE)) ~ "SPG (laparo)",
-      str_detect(INTERVENTION, regex("spg|pancréatectomie.*gauche", TRUE)) ~ "SPG (coelio)",
-      
-      # DPC
-      str_detect(INTERVENTION, regex("dpc.*robot", TRUE)) ~ "Pancréatectomie céphalique (robot)",
-      str_detect(INTERVENTION, regex("dpc", TRUE)) ~ "Pancréatectomie céphalique (laparo)",
-      str_detect(INTERVENTION, regex("reprise.*dpc", TRUE)) ~ "Reprise pancréatectomie",
-      
-      TRUE ~ NA_character_
-    )
-  )
-
-df <- df %>%
-  mutate(
-    INTERVENTION_GROUPÉE = case_when(
-      !is.na(INTERVENTION_GROUPÉE) ~ INTERVENTION_GROUPÉE,
-      
-      # Colectomies droites
-      str_detect(INTERVENTION, regex("colectomie.*droite", TRUE)) ~ "Colectomie droite (coelio)",
-      
-      # Colectomies gauches
-      str_detect(INTERVENTION, regex("colectomie.*gauche.*laparo", TRUE)) ~ "Colectomie gauche (laparo)",
-      str_detect(INTERVENTION, regex("colectomie.*gauche|sigmoidectomie|sigmoïdectomie", TRUE)) ~ "Colectomie gauche (coelio)",
-      
-      # Colectomie subtotale
-      str_detect(INTERVENTION, regex("colectomie.*sub[- ]?totale", TRUE)) ~ "Colectomie subtotale (laparo)",
-      
-      # Hartmann
-      str_detect(INTERVENTION, regex("hartmann.*coelio", TRUE)) ~ "Hartmann (coelio)",
-      str_detect(INTERVENTION, regex("hartmann", TRUE)) ~ "Hartmann (laparo)",
-      
-      # Résection iléo-caecale
-      str_detect(INTERVENTION, regex("résection.*il[ée]o[- ]?caecale.*laparo", TRUE)) ~ "Résection iléo-caecale (laparo)",
-      str_detect(INTERVENTION, regex("résection.*il[ée]o[- ]?caecale|^ric$|^ric ", TRUE)) ~ "Résection iléo-caecale (coelio)",
-      
-      # Rectum
-      str_detect(INTERVENTION, regex("rectum.*robot|rrs.*robot", TRUE)) ~ "Rectum (robot)",
-      str_detect(INTERVENTION, regex("rectum.*laparo|rrs.*laparo", TRUE)) ~ "Rectum (laparo)",
-      str_detect(INTERVENTION, regex("rectum|rrs", TRUE)) ~ "Rectum (coelio)",
-      
-      # Stomies
-      str_detect(INTERVENTION, regex("colostomie.*laparo", TRUE)) ~ "Colostomie (laparo)",
-      str_detect(INTERVENTION, regex("colostomie", TRUE)) ~ "Colostomie (coelio)",
-      str_detect(INTERVENTION, regex("iléostomie.*laparo", TRUE)) ~ "Iléostomie (laparo)",
-      str_detect(INTERVENTION, regex("iléostomie", TRUE)) ~ "Iléostomie (coelio)",
-      
-      TRUE ~ NA_character_
-    )
-  )
-
-df <- df %>%
-  mutate(
-    INTERVENTION_GROUPÉE = case_when(
-      !is.na(INTERVENTION_GROUPÉE) ~ INTERVENTION_GROUPÉE,
-      
-      # Cure hernie inguinale
-      str_detect(INTERVENTION, regex("lichtenstein|licht", TRUE)) ~ "Cure hernie inguinale (open)",
-      str_detect(INTERVENTION, regex("tep", TRUE)) ~ "Cure hernie inguinale (TEP)",
-      str_detect(INTERVENTION, regex("tapp|coelio.*inguinale", TRUE)) ~ "Cure hernie inguinale (coelio)",
-      str_detect(INTERVENTION, regex("hernie inguinale.*(laparo|abord direct|open)", TRUE)) ~ "Cure hernie inguinale (open)",
-      str_detect(INTERVENTION, regex("hernie inguinale", TRUE)) ~ "Cure hernie inguinale (open)",
-      
-      # Hernie ombilicale
-      str_detect(INTERVENTION, regex("hernie.*ombilicale", TRUE)) ~ "Cure hernie ombilicale",
-      
-      # Hernie ligne blanche
-      str_detect(INTERVENTION, regex("hernie.*ligne blanche", TRUE)) ~ "Cure hernie ligne blanche",
-      
-      # Hernie hiatale
-      str_detect(INTERVENTION, regex("hernie hiatale.*robot", TRUE)) ~ "Cure hernie hiatale (robot)",
-      str_detect(INTERVENTION, regex("hernie hiatale|fundoplicature|nissen", TRUE)) ~ "Cure hernie hiatale",
-      
-      # Cure éventration
-      str_detect(INTERVENTION, regex("éventration.*coelio", TRUE)) ~ "Cure d’éventration (coelio)",
-      str_detect(INTERVENTION, regex("éventration", TRUE)) ~ "Cure d’éventration (laparo)",
-      
-      # Ulcère perforé
-      str_detect(INTERVENTION, regex("ulcère.*perforé", TRUE)) ~ "Ulcère perforé (coelio)",
-      
-      # Fissurectomie
-      str_detect(INTERVENTION, regex("fissurectomie", TRUE)) ~ "Fissurectomie",
-      
-      # Kyste pilonidal
-      str_detect(INTERVENTION, regex("kyste.*pilonidal|sinus.*pilonidal", TRUE)) ~ "Exérèse sinus pilonidal",
-      
-      # TIPS
-      str_detect(INTERVENTION, regex("tips", TRUE)) ~ "Pose de TIPS",
-      
-      # Fenestration kyste foie
-      str_detect(INTERVENTION, regex("fenestration.*kyste.*foie|kyste hépatique", TRUE)) ~ "Fenestration kyste hépatique (coelio)",
-      
-      TRUE ~ NA_character_
-    )
-  )
-
-df <- df %>%
-  mutate(
-    INTERVENTION_GROUPÉE = case_when(
-      !is.na(INTERVENTION_GROUPÉE) ~ INTERVENTION_GROUPÉE,
-      
-      # TEM
-      str_detect(INTERVENTION, regex("^tem$|exérèse.*muqueuse.*transanale", TRUE)) ~ "TEM (chirurgie transanale)",
-      
-      # Vaginoplastie
-      str_detect(INTERVENTION, regex("vaginoplastie|vagino", TRUE)) ~ "Vaginoplastie",
-      
-      # Biopsie intra-abdominale
-      str_detect(INTERVENTION, regex("biopsie.*ganglion|biopsie.*m[ée]sent[ée]rique", TRUE)) ~ "Biopsie intra-abdominale",
-      
-      # Exploration des 4 sites
-      str_detect(INTERVENTION, regex("4 sites|exérèse P3|parathyro", TRUE)) ~ "Exploration des 4 sites",
-      
-      # Laparotomie exploratrice
-      str_detect(INTERVENTION, regex("laparo explo|laparotomie exploratrice|bodypacker|corps étranger|fistule.*(iléocutanée|gastro)", TRUE)) ~ "Laparotomie exploratrice",
-      
-      # Reprise
-      str_detect(INTERVENTION, regex("reprise.*transplant", TRUE)) ~ "Reprise transplantation",
-      str_detect(INTERVENTION, regex("reprise.*dpc", TRUE)) ~ "Reprise pancréatectomie",
-      str_detect(INTERVENTION, regex("reprise", TRUE)) ~ "Reprise chirurgicale",
-      
-      # Réintervention
-      str_detect(INTERVENTION, regex("réintervention", TRUE)) ~ "Réintervention",
-      
-      # Drainage chirurgical
-      str_detect(INTERVENTION, regex("drainage", TRUE)) ~ "Drainage chirurgical",
-      
-      # Fistule digestive
-      str_detect(INTERVENTION, regex("fistule", TRUE)) ~ "Fistule digestive",
-      
-      # Pose de PAC
-      str_detect(INTERVENTION, regex("pac", TRUE)) ~ "Pose de PAC",
-      
-      # Back Table
-      str_detect(INTERVENTION, regex("back ?table", TRUE)) ~ "Back table greffe hépatique",
-      
-      TRUE ~ "Autre"
-    )
-  )
-
-
-
-
-
-# Bloc 1/17
-df <- df %>%
-  mutate(INTERVENTION_GROUPÉE = case_when(
-    str_detect(INTERVENTION, regex("1er[e]? temps de ALPPS", ignore_case = TRUE)) ~ "1er temps de ALPPS",
-    str_detect(INTERVENTION, regex("2e temps colo.?anale", ignore_case = TRUE)) ~ "2e temps colo-anale différée",
-    str_detect(INTERVENTION, regex("Back table", ignore_case = TRUE)) ~ "Back table greffe hépatique",
-    str_detect(INTERVENTION, regex("Biopsie hépatique", ignore_case = TRUE)) ~ "Biopsie hépatique",
-    str_detect(INTERVENTION, regex("Biopsie intra-abdominale", ignore_case = TRUE)) ~ "Biopsie intra-abdominale",
-    str_detect(INTERVENTION, regex("By.?pass.*robot", ignore_case = TRUE)) ~ "Bypass gastrique (robot)",
-    str_detect(INTERVENTION, regex("By.?pass", ignore_case = TRUE)) ~ "Bypass gastrique (coelio)",
-    str_detect(INTERVENTION, regex("Cytoréduction.*laparo", ignore_case = TRUE)) ~ "Cytoréduction (laparo)",
-    str_detect(INTERVENTION, regex("Cytoréduction|CHIP", ignore_case = TRUE)) ~ "Cytoréduction (laparo)",
-    str_detect(INTERVENTION, regex("Donneur vivant.*robot", ignore_case = TRUE)) ~ "Donneur vivant (robot)",
-    str_detect(INTERVENTION, regex("Don vivant|Donneur vivant", ignore_case = TRUE)) ~ "Donneur vivant (coelio)",
-    str_detect(INTERVENTION, regex("Exploration des 4 sites|4 sites|parathyroidectomie", ignore_case = TRUE)) ~ "Exploration des 4 sites",
-    TRUE ~ INTERVENTION_GROUPÉE
-  ))
-
-# Bloc 2/17
-df <- df %>%
-  mutate(INTERVENTION_GROUPÉE = case_when(
-    str_detect(INTERVENTION, regex("abcès.*MA|abcès.*marge|abcès.*fesse", ignore_case = TRUE)) ~ "Abcès de marge anale",
-    str_detect(INTERVENTION, regex("amput.*abdomino.*périn.*", ignore_case = TRUE)) ~ "Amputation abdomino périnéale",
-    str_detect(INTERVENTION, regex("Annexectomie.*laparo", ignore_case = TRUE)) ~ "Annexectomie laparotomie",
-    str_detect(INTERVENTION, regex("Appendicectomie|appendicite|APP", ignore_case = TRUE)) ~ "Appendicectomie coelio",
-    str_detect(INTERVENTION, regex("Cholécystectomie.*coelio|cholecystectomie.*coelio|vesicule", ignore_case = TRUE)) ~ "Cholécystectomie",
-    str_detect(INTERVENTION, regex("cholecystectomie.*laparo|cholécystectomie.*laparo", ignore_case = TRUE)) ~ "Cholécystectomie",
-    str_detect(INTERVENTION, regex("^Cholécystectomie$", ignore_case = TRUE)) ~ "Cholécystectomie",
-    str_detect(INTERVENTION, regex("coelio explo|exploratrice|exploration|laparo explo", ignore_case = TRUE)) ~ "Laparotomie exploratrice",
-    str_detect(INTERVENTION, regex("Examen.*anal|procto", ignore_case = TRUE)) ~ "Examen anal",
-    str_detect(INTERVENTION, regex("Fistule anale|fistule iléo|fistulisation|gastro-péricardique", ignore_case = TRUE)) ~ "Fistule digestive",
-    TRUE ~ INTERVENTION_GROUPÉE
-  ))
-
-# Bloc 3/17
-df <- df %>%
-  mutate(INTERVENTION_GROUPÉE = case_when(
-    str_detect(INTERVENTION, regex("Cytoréduction|cytoreduction|CHIP", ignore_case = TRUE)) ~ "Cytoréduction (laparo)",
-    str_detect(INTERVENTION, regex("colostomie.*coelio", ignore_case = TRUE)) ~ "Colostomie (coelio)",
-    str_detect(INTERVENTION, regex("colostomie.*laparo", ignore_case = TRUE)) ~ "Colostomie (laparo)",
-    str_detect(INTERVENTION, regex("colostomie", ignore_case = TRUE)) ~ "Colostomie (coelio)",
-    str_detect(INTERVENTION, regex("Iléostomie.*laparo", ignore_case = TRUE)) ~ "Iléostomie (laparo)",
-    str_detect(INTERVENTION, regex("Iléostomie.*coelio", ignore_case = TRUE)) ~ "Iléostomie (coelio)",
-    str_detect(INTERVENTION, regex("Iléostomie", ignore_case = TRUE)) ~ "Iléostomie (coelio)",
-    str_detect(INTERVENTION, regex("Exérèse sinus pilonidal|sinus pilonidal", ignore_case = TRUE)) ~ "Exérèse sinus pilonidal",
-    str_detect(INTERVENTION, regex("Gastrectomie totale", ignore_case = TRUE)) ~ "Gastrectomie totale",
-    str_detect(INTERVENTION, regex("Ulcère.*perforé", ignore_case = TRUE)) ~ "Ulcère perforé (coelio)",
-    str_detect(INTERVENTION, regex("TEM|chirurgie transanale", ignore_case = TRUE)) ~ "TEM (chirurgie transanale)",
-    TRUE ~ INTERVENTION_GROUPÉE
-  ))
-
-# Bloc 4/17
-df <- df %>%
-  mutate(INTERVENTION_GROUPÉE = case_when(
-    str_detect(INTERVENTION, regex("Transplantation hépatique|TH(?!Y)|re-TH", ignore_case = TRUE)) ~ "Transplantation hépatique",
-    str_detect(INTERVENTION, regex("Transplantation pancréatique|TPR", ignore_case = TRUE)) ~ "Transplantation pancréatique",
-    str_detect(INTERVENTION, regex("Prélèvement.*(hépatique|foie)", ignore_case = TRUE)) ~ "Prélèvement hépatique",
-    str_detect(INTERVENTION, regex("Prélèvement.*pancr", ignore_case = TRUE)) ~ "Prélèvement pancréatique",
-    str_detect(INTERVENTION, regex("Donneur vivant", ignore_case = TRUE)) ~ "Donneur vivant (coelio)",
-    str_detect(INTERVENTION, regex("rectum.*coelio", ignore_case = TRUE)) ~ "Rectum (coelio)",
-    str_detect(INTERVENTION, regex("rectum.*laparo", ignore_case = TRUE)) ~ "Rectum (laparo)",
-    str_detect(INTERVENTION, regex("rectum.*robot", ignore_case = TRUE)) ~ "Rectum (robot)",
-    str_detect(INTERVENTION, regex("rectum", ignore_case = TRUE)) ~ "Rectum (coelio)",
-    str_detect(INTERVENTION, regex("Résection iléo-caecale.*laparo", ignore_case = TRUE)) ~ "Résection iléo-caecale (laparo)",
-    str_detect(INTERVENTION, regex("Résection iléo-caecale", ignore_case = TRUE)) ~ "Résection iléo-caecale (coelio)",
-    TRUE ~ INTERVENTION_GROUPÉE
-  ))
-
-# Bloc 5/17
-df <- df %>%
-  mutate(INTERVENTION_GROUPÉE = case_when(
-    str_detect(INTERVENTION, regex("SPG.*robot", ignore_case = TRUE)) ~ "SPG (robot)",
-    str_detect(INTERVENTION, regex("SPG.*laparo", ignore_case = TRUE)) ~ "SPG (laparo)",
-    str_detect(INTERVENTION, regex("SPG", ignore_case = TRUE)) ~ "SPG (coelio)",
-    str_detect(INTERVENTION, regex("Pancréatectomie céphalique.*robot", ignore_case = TRUE)) ~ "Pancréatectomie céphalique (robot)",
-    str_detect(INTERVENTION, regex("Pancréatectomie céphalique.*laparo", ignore_case = TRUE)) ~ "Pancréatectomie céphalique (laparo)",
-    str_detect(INTERVENTION, regex("Pancréatectomie céphalique", ignore_case = TRUE)) ~ "Pancréatectomie céphalique (laparo)",
-    str_detect(INTERVENTION, regex("Pose de PAC", ignore_case = TRUE)) ~ "Pose de PAC",
-    str_detect(INTERVENTION, regex("TIPS", ignore_case = TRUE)) ~ "Pose de TIPS",
-    str_detect(INTERVENTION, regex("Œsophagectomie de Lewis Santy", ignore_case = TRUE)) ~ "Œsophagectomie de Lewis Santy",
-    str_detect(INTERVENTION, regex("Lewis Santy", ignore_case = TRUE)) ~ "Œsophagectomie de Lewis Santy",
-    str_detect(INTERVENTION, regex("3 voies", ignore_case = TRUE)) ~ "Œsophagectomie 3 voies",
-    TRUE ~ INTERVENTION_GROUPÉE
-  ))
-
-# Bloc 6/17
-df <- df %>%
-  mutate(INTERVENTION_GROUPÉE = case_when(
-    str_detect(INTERVENTION, regex("Back table.*greffe hépatique", ignore_case = TRUE)) ~ "Back table greffe hépatique",
-    str_detect(INTERVENTION, regex("Back table", ignore_case = TRUE)) ~ "Back table greffe hépatique",
-    str_detect(INTERVENTION, regex("Biopsie.*intra-abdominale", ignore_case = TRUE)) ~ "Biopsie intra-abdominale",
-    str_detect(INTERVENTION, regex("Biopsie.*hépatique.*percutanée", ignore_case = TRUE)) ~ "Biopsie hépatique",
-    str_detect(INTERVENTION, regex("Biopsie.*hépatique", ignore_case = TRUE)) ~ "Biopsie hépatique",
-    str_detect(INTERVENTION, regex("Biopsie.*", ignore_case = TRUE)) ~ "Examen anal",
-    str_detect(INTERVENTION, regex("Drainage.*", ignore_case = TRUE)) ~ "Drainage chirurgical",
-    str_detect(INTERVENTION, regex("Changement.*drain.*biliaire", ignore_case = TRUE)) ~ "Drainage chirurgical",
-    str_detect(INTERVENTION, regex("Ponction.*abcès.*hépatique", ignore_case = TRUE)) ~ "Drainage chirurgical",
-    str_detect(INTERVENTION, regex("Drinage.*", ignore_case = TRUE)) ~ "Drainage chirurgical",
-    str_detect(INTERVENTION, regex("Explantation hépatique", ignore_case = TRUE)) ~ "Reprise transplantation",
-    str_detect(INTERVENTION, regex("Reprise.*transplantation", ignore_case = TRUE)) ~ "Reprise transplantation",
-    str_detect(INTERVENTION, regex("Reprise DPC", ignore_case = TRUE)) ~ "Reprise chirurgicale",
-    str_detect(INTERVENTION, regex("Reprise chirurgicale", ignore_case = TRUE)) ~ "Reprise chirurgicale",
-    TRUE ~ INTERVENTION_GROUPÉE
-  ))
-
-# Bloc 7/17
-df <- df %>%
-  mutate(INTERVENTION_GROUPÉE = case_when(
-    str_detect(INTERVENTION, regex("CHIP", ignore_case = TRUE)) ~ "Cytoréduction (laparo)",
-    str_detect(INTERVENTION, regex("Cytoréduction.*", ignore_case = TRUE)) ~ "Cytoréduction (laparo)",
-    str_detect(INTERVENTION, regex("Cytochip", ignore_case = TRUE)) ~ "Cytoréduction (laparo)",
-    str_detect(INTERVENTION, regex("cyto.*réduc", ignore_case = TRUE)) ~ "Cytoréduction (laparo)",
-    str_detect(INTERVENTION, regex("lavage.*paroi", ignore_case = TRUE)) ~ "Drainage chirurgical",
-    str_detect(INTERVENTION, regex("lavage.*hématome", ignore_case = TRUE)) ~ "Drainage chirurgical",
-    str_detect(INTERVENTION, regex("Laparostomie", ignore_case = TRUE)) ~ "Drainage chirurgical",
-    str_detect(INTERVENTION, regex("VAC", ignore_case = TRUE)) ~ "Drainage chirurgical",
-    str_detect(INTERVENTION, regex("Milligan.*Morgan", ignore_case = TRUE)) ~ "Examen anal",
-    str_detect(INTERVENTION, regex("fistule.*anal.*séton", ignore_case = TRUE)) ~ "Examen anal",
-    str_detect(INTERVENTION, regex("abcès.*marge.*anal", ignore_case = TRUE)) ~ "Abcès de marge anale",
-    str_detect(INTERVENTION, regex("abcès.*MA", ignore_case = TRUE)) ~ "Abcès de marge anale",
-    str_detect(INTERVENTION, regex("abcès.*marge", ignore_case = TRUE)) ~ "Abcès de marge anale",
-    TRUE ~ INTERVENTION_GROUPÉE
-  ))
-
-
-# Bloc 8/17
-df <- df %>%
-  mutate(INTERVENTION_GROUPÉE = case_when(
-    str_detect(INTERVENTION, regex("exérèse.*lipome", ignore_case = TRUE)) ~ "Exérèse sous-cutanée",
-    str_detect(INTERVENTION, regex("kyste.*sébacé", ignore_case = TRUE)) ~ "Exérèse sous-cutanée",
-    str_detect(INTERVENTION, regex("kyste pilo", ignore_case = TRUE)) ~ "Exérèse sinus pilonidal",
-    str_detect(INTERVENTION, regex("sinus pilonidal", ignore_case = TRUE)) ~ "Exérèse sinus pilonidal",
-    str_detect(INTERVENTION, regex("exérèse.*kyste.*(pelvien|sous-cut|sous cut|paroi)", ignore_case = TRUE)) ~ "Exérèse sous-cutanée",
-    str_detect(INTERVENTION, regex("parathy", ignore_case = TRUE)) ~ "Exploration des 4 sites",
-    str_detect(INTERVENTION, regex("4 sites", ignore_case = TRUE)) ~ "Exploration des 4 sites",
-    str_detect(INTERVENTION, regex("exploration.*sites", ignore_case = TRUE)) ~ "Exploration des 4 sites",
-    str_detect(INTERVENTION, regex("exérèse.*ganglion.*coeli", ignore_case = TRUE)) ~ "Exploration des 4 sites",
-    str_detect(INTERVENTION, regex("biopsie.*(canal anal|lésion anale|procto)", ignore_case = TRUE)) ~ "Examen anal",
-    str_detect(INTERVENTION, regex("examen.*anal", ignore_case = TRUE)) ~ "Examen anal",
-    str_detect(INTERVENTION, regex("examen.*procto", ignore_case = TRUE)) ~ "Examen anal",
-    str_detect(INTERVENTION, regex("fissurectomie", ignore_case = TRUE)) ~ "Examen anal",
-    str_detect(INTERVENTION, regex("biopsie.*hépatique.*percutanée", ignore_case = TRUE)) ~ "Biopsie hépatique",
-    str_detect(INTERVENTION, regex("biopsie.*hépatique", ignore_case = TRUE)) ~ "Biopsie hépatique",
-    str_detect(INTERVENTION, regex("biopsie.*foie", ignore_case = TRUE)) ~ "Biopsie hépatique",
-    TRUE ~ INTERVENTION_GROUPÉE
-  ))
-
-
-# Bloc 9/17
-df <- df %>%
-  mutate(INTERVENTION_GROUPÉE = case_when(
-    str_detect(INTERVENTION, regex("fenestration.*kyste", ignore_case = TRUE)) ~ "Drainage chirurgical",
-    str_detect(INTERVENTION, regex("drainage.*abcès", ignore_case = TRUE)) ~ "Drainage chirurgical",
-    str_detect(INTERVENTION, regex("ponction.*abcès", ignore_case = TRUE)) ~ "Drainage chirurgical",
-    str_detect(INTERVENTION, regex("évacuation.*hématome", ignore_case = TRUE)) ~ "Drainage chirurgical",
-    str_detect(INTERVENTION, regex("lavage.*paroi", ignore_case = TRUE)) ~ "Drainage chirurgical",
-    str_detect(INTERVENTION, regex("VAC", ignore_case = TRUE)) ~ "Drainage chirurgical",
-    str_detect(INTERVENTION, regex("mise à plat.*abcès.*marge", ignore_case = TRUE)) ~ "Abcès de marge anale",
-    str_detect(INTERVENTION, regex("abcès.*marge.*anale", ignore_case = TRUE)) ~ "Abcès de marge anale",
-    str_detect(INTERVENTION, regex("abcès.*marge", ignore_case = TRUE)) ~ "Abcès de marge anale",
-    str_detect(INTERVENTION, regex("abcès.*(MA|fesse)", ignore_case = TRUE)) ~ "Abcès de marge anale",
-    str_detect(INTERVENTION, regex("abcès.*inguinal", ignore_case = TRUE)) ~ "Drainage chirurgical",
-    str_detect(INTERVENTION, regex("abcès.*axillaire", ignore_case = TRUE)) ~ "Drainage chirurgical",
-    str_detect(INTERVENTION, regex("abcès.*épaule", ignore_case = TRUE)) ~ "Drainage chirurgical",
-    str_detect(INTERVENTION, regex("exérèse.*ganglion.*SC", ignore_case = TRUE)) ~ "Exérèse sous-cutanée",
-    str_detect(INTERVENTION, regex("exérèse.*lésion.*cutanée", ignore_case = TRUE)) ~ "Exérèse sous-cutanée",
-    str_detect(INTERVENTION, regex("lipome", ignore_case = TRUE)) ~ "Exérèse sous-cutanée",
-    str_detect(INTERVENTION, regex("nodule.*pariétal", ignore_case = TRUE)) ~ "Exérèse sous-cutanée",
-    TRUE ~ INTERVENTION_GROUPÉE
-  ))
-
-# Bloc 10/17
-df <- df %>%
-  mutate(INTERVENTION_GROUPÉE = case_when(
-    str_detect(INTERVENTION, regex("colectomie.*droite", ignore_case = TRUE)) ~ "Colectomie droite (coelio)",
-    str_detect(INTERVENTION, regex("colon.*d.*coelio", ignore_case = TRUE)) ~ "Colectomie droite (coelio)",
-    str_detect(INTERVENTION, regex("colectomie.*D\\b", ignore_case = TRUE)) ~ "Colectomie droite (coelio)",
-    str_detect(INTERVENTION, regex("colectomie.*gauche.*laparo", ignore_case = TRUE)) ~ "Colectomie gauche (laparo)",
-    str_detect(INTERVENTION, regex("colectomie.*gauche", ignore_case = TRUE)) ~ "Colectomie gauche (coelio)",
-    str_detect(INTERVENTION, regex("colon.*g.*coelio", ignore_case = TRUE)) ~ "Colectomie gauche (coelio)",
-    str_detect(INTERVENTION, regex("colectomie.*transverse", ignore_case = TRUE)) ~ "Colectomie transverse",
-    str_detect(INTERVENTION, regex("colectomie.*subtotale", ignore_case = TRUE)) ~ "Colectomie subtotale (laparo)",
-    str_detect(INTERVENTION, regex("colectomie.*totale", ignore_case = TRUE)) ~ "Colectomie totale (laparo)",
-    str_detect(INTERVENTION, regex("colectomie.*", ignore_case = TRUE)) & str_detect(INTERVENTION, regex("robot", ignore_case = TRUE)) ~ "Colectomie (robot)",
-    str_detect(INTERVENTION, regex("colon.*sub.*coelio", ignore_case = TRUE)) ~ "Colectomie subtotale (coelio)",
-    str_detect(INTERVENTION, regex("resection.*sigmoidienne.*laparo", ignore_case = TRUE)) ~ "Rectum (laparo)",
-    str_detect(INTERVENTION, regex("sigmoïdectomie", ignore_case = TRUE)) ~ "Colectomie gauche (coelio)",
-    TRUE ~ INTERVENTION_GROUPÉE
-  ))
-
-
-# Bloc 11/17
-df <- df %>%
-  mutate(INTERVENTION_GROUPÉE = case_when(
-    str_detect(INTERVENTION, regex("résection.*gr[êe]le", ignore_case = TRUE)) ~ "Résection de grêle",
-    str_detect(INTERVENTION, regex("anastomose.*gr[êe]le", ignore_case = TRUE)) ~ "Résection de grêle",
-    str_detect(INTERVENTION, regex("iléostomie.*laparo", ignore_case = TRUE)) ~ "Iléostomie (laparo)",
-    str_detect(INTERVENTION, regex("iléostomie", ignore_case = TRUE)) ~ "Iléostomie (coelio)",
-    str_detect(INTERVENTION, regex("colostomie.*laparo", ignore_case = TRUE)) ~ "Colostomie (laparo)",
-    str_detect(INTERVENTION, regex("colostomie", ignore_case = TRUE)) ~ "Colostomie (coelio)",
-    str_detect(INTERVENTION, regex("fermeture.*ilé", ignore_case = TRUE)) ~ "Fermeture d'iléostomie",
-    str_detect(INTERVENTION, regex("fermeture.*colo", ignore_case = TRUE)) ~ "Fermeture de colostomie",
-    str_detect(INTERVENTION, regex("fermeture.*stomie", ignore_case = TRUE)) ~ "Fermeture de stomie",
-    str_detect(INTERVENTION, regex("fermeture.*j[ée]juno", ignore_case = TRUE)) ~ "Fermeture de jéjunostomie",
-    TRUE ~ INTERVENTION_GROUPÉE
-  ))
-
-# Bloc 12/17
-df <- df %>%
-  mutate(INTERVENTION_GROUPÉE = case_when(
-    str_detect(INTERVENTION, regex("rectopexie", ignore_case = TRUE)) ~ "Rectopexie (coelio)",
-    str_detect(INTERVENTION, regex("proctectomie.*coelio", ignore_case = TRUE)) ~ "Rectum (coelio)",
-    str_detect(INTERVENTION, regex("proctectomie", ignore_case = TRUE)) ~ "Rectum (laparo)",
-    str_detect(INTERVENTION, regex("exérèse.*rétrorectal", ignore_case = TRUE)) ~ "Exérèse tumeur rétrorectale",
-    str_detect(INTERVENTION, regex("kyste.*[pP]ilonidal|sinus.*p[iî]lonidal|kyste.*sacrococcygien", ignore_case = TRUE)) ~ "Exérèse sinus pilonidal",
-    str_detect(INTERVENTION, regex("sinus.*pi", ignore_case = TRUE)) ~ "Exérèse sinus pilonidal",
-    str_detect(INTERVENTION, regex("Milligan|fissurectomie|fissure anale|fistulectomie", ignore_case = TRUE)) ~ "Examen anal",
-    str_detect(INTERVENTION, regex("fistule.*anale", ignore_case = TRUE)) ~ "Examen anal",
-    str_detect(INTERVENTION, regex("abc[eè]s.*marge|abc[eè]s.*anal|abc[eè]s.*MA", ignore_case = TRUE)) ~ "Abcès de marge anale",
-    TRUE ~ INTERVENTION_GROUPÉE
-  ))
-
-# Bloc 13/17
-df <- df %>%
-  mutate(INTERVENTION_GROUPÉE = case_when(
-    str_detect(INTERVENTION, regex("app|appendicite|appendicectomie", ignore_case = TRUE)) ~ "Appendicectomie coelio",
-    str_detect(INTERVENTION, regex("ileo|iléostomie", ignore_case = TRUE)) &
-      !str_detect(INTERVENTION, regex("fermeture", ignore_case = TRUE)) ~ "Iléostomie (coelio)",
-    str_detect(INTERVENTION, regex("fermeture.*(ilé|ileo)", ignore_case = TRUE)) ~ "Rétablissement de continuité",
-    str_detect(INTERVENTION, regex("colostomie", ignore_case = TRUE)) &
-      !str_detect(INTERVENTION, regex("fermeture", ignore_case = TRUE)) ~ "Colostomie (coelio)",
-    str_detect(INTERVENTION, regex("fermeture.*(colo|colostomie)", ignore_case = TRUE)) ~ "Rétablissement de continuité",
-    str_detect(INTERVENTION, regex("stomie.*fermeture|fermeture.*stomie", ignore_case = TRUE)) ~ "Rétablissement de continuité",
-    str_detect(INTERVENTION, regex("Hartmann.*r[eé]tabl", ignore_case = TRUE)) ~ "Rétablissement de continuité",
-    str_detect(INTERVENTION, regex("r[eé]tablissement.*continuit[eé]", ignore_case = TRUE)) ~ "Rétablissement de continuité",
-    TRUE ~ INTERVENTION_GROUPÉE
-  ))
-
-# Bloc 14/17
-df <- df %>%
-  mutate(INTERVENTION_GROUPÉE = case_when(
-    str_detect(INTERVENTION, regex("abces|abcès.*marge|abcès.*anal|abcès.*fesse", ignore_case = TRUE)) ~ "Abcès de marge anale",
-    str_detect(INTERVENTION, regex("fistule.*anale|fistule.*marge", ignore_case = TRUE)) ~ "Examen anal",
-    str_detect(INTERVENTION, regex("fissure.*anale", ignore_case = TRUE)) ~ "Examen anal",
-    str_detect(INTERVENTION, regex("milligan|morgan", ignore_case = TRUE)) ~ "Examen anal",
-    str_detect(INTERVENTION, regex("sinus.*pilonidal|kyste.*sacrococcygien", ignore_case = TRUE)) ~ "Exérèse sinus pilonidal",
-    str_detect(INTERVENTION, regex("prolapsus.*stom", ignore_case = TRUE)) ~ "Reprise chirurgicale",
-    str_detect(INTERVENTION, regex("drainage.*abcès|drainage.*abces", ignore_case = TRUE)) ~ "Drainage chirurgical",
-    str_detect(INTERVENTION, regex("biopsie.*h[ée]patique", ignore_case = TRUE)) ~ "Biopsie hépatique",
-    str_detect(INTERVENTION, regex("by.?pass.*gastrique", ignore_case = TRUE)) ~ "Bypass gastrique (coelio)",
-    TRUE ~ INTERVENTION_GROUPÉE
-  ))
-
-# Bloc 15/17
-df <- df %>%
-  mutate(INTERVENTION_GROUPÉE = case_when(
-    str_detect(INTERVENTION, regex("wedge.*|segmentectomie|sectoriectomie|unisegmentectomie", ignore_case = TRUE)) ~ "Hépatectomie mineure (coelio)",
-    str_detect(INTERVENTION, regex("hépatectomie.*droite|hépatectomie.*gauche.*élargie|centrale|totale", ignore_case = TRUE)) &
-      !str_detect(INTERVENTION, regex("coelio|robot", ignore_case = TRUE)) ~ "Hépatectomie majeure (laparo)",
-    str_detect(INTERVENTION, regex("hépatectomie.*droite|hépatectomie.*gauche.*élargie|centrale|totale", ignore_case = TRUE)) &
-      str_detect(INTERVENTION, regex("coelio", ignore_case = TRUE)) ~ "Hépatectomie majeure (coelio)",
-    str_detect(INTERVENTION, regex("hépatectomie.*droite|hépatectomie.*gauche", ignore_case = TRUE)) &
-      str_detect(INTERVENTION, regex("robot", ignore_case = TRUE)) ~ "Hépatectomie majeure (robot)",
-    str_detect(INTERVENTION, regex("resection.*hep", ignore_case = TRUE)) ~ "Hépatectomie mineure (coelio)",
-    str_detect(INTERVENTION, regex("exploration.*4 sites|4 sites|parathyro", ignore_case = TRUE)) ~ "Exploration des 4 sites",
-    str_detect(INTERVENTION, regex("resection.*grele|résection.*gr[êe]le|anastomose.*gr[êe]le", ignore_case = TRUE)) ~ "Résection de grêle",
-    TRUE ~ INTERVENTION_GROUPÉE
-  ))
-
-# Bloc 16/17
-df <- df %>%
-  mutate(INTERVENTION_GROUPÉE = case_when(
-    str_detect(INTERVENTION, regex("spl[ée]nectomie", ignore_case = TRUE)) &
-      !str_detect(INTERVENTION, regex("laparo|robot", ignore_case = TRUE)) ~ "Splénectomie (coelio)",
-    str_detect(INTERVENTION, regex("spl[ée]nectomie", ignore_case = TRUE)) &
-      str_detect(INTERVENTION, regex("laparo", ignore_case = TRUE)) ~ "Splénectomie (laparo)",
-    str_detect(INTERVENTION, regex("spl[ée]nectomie", ignore_case = TRUE)) &
-      str_detect(INTERVENTION, regex("robot", ignore_case = TRUE)) ~ "Splénectomie (robot)",
-    str_detect(INTERVENTION, regex("fistule.*digestive|entero-cutan[ée]|gastro-p[ée]ricardique|iléocutan[ée]", ignore_case = TRUE)) ~ "Fistule digestive",
-    str_detect(INTERVENTION, regex("prolapsus.*stom", ignore_case = TRUE)) ~ "Reprise chirurgicale",
-    str_detect(INTERVENTION, regex("pose de TIPS|TIPS", ignore_case = TRUE)) ~ "Pose de TIPS",
-    str_detect(INTERVENTION, regex("transplantation.*h[ée]patique", ignore_case = TRUE)) ~ "Transplantation hépatique",
-    str_detect(INTERVENTION, regex("transplantation.*pancr[ée]atique|pancr[ée]as", ignore_case = TRUE)) ~ "Transplantation pancréatique",
-    TRUE ~ INTERVENTION_GROUPÉE
-  ))
-
-# Bloc 17/17
-df <- df %>%
-  mutate(INTERVENTION_GROUPÉE = case_when(
-    str_detect(INTERVENTION, regex("coloplastie|colopharyngoplastie|pharyngo-gastroplastie", ignore_case = TRUE)) ~ "Examen anal",
-    str_detect(INTERVENTION, regex("abc[eè]s.*marge|marge anale|abc[eè]s.*fesse", ignore_case = TRUE)) ~ "Abcès de marge anale",
-    str_detect(INTERVENTION, regex("biopsie.*h[ée]patique", ignore_case = TRUE)) ~ "Biopsie hépatique",
-    str_detect(INTERVENTION, regex("biopsie intra.*abdominale", ignore_case = TRUE)) ~ "Biopsie intra-abdominale",
-    str_detect(INTERVENTION, regex("j[ée]junostomie", ignore_case = TRUE)) ~ "Iléostomie (laparo)",
-    str_detect(INTERVENTION, regex("VAC", ignore_case = TRUE)) ~ "Reprise chirurgicale",
-    str_detect(INTERVENTION, regex("rectopexie", ignore_case = TRUE)) ~ "Rectum (coelio)",
-    str_detect(INTERVENTION, regex("retablissement.*hartmann|r[ée]tabliss?imen?t.*hartmann", ignore_case = TRUE)) ~ "Reprise chirurgicale",
-    str_detect(INTERVENTION, regex("fermeture.*stomie|fermture.*stomie|fermeture.*il[ée]o|ferm.*colo", ignore_case = TRUE)) ~ "Reprise chirurgicale",
-    TRUE ~ INTERVENTION_GROUPÉE
-  ))
-
-df <- df %>%
-  mutate(INTERVENTION_GROUPÉE = if_else(is.na(INTERVENTION_GROUPÉE), "Autre", INTERVENTION_GROUPÉE))
-
-df <- df %>%
-  mutate(
-    INTERVENTION_GROUPÉE = case_when(
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("PMO") ~ "SPG (coelio)",
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Cholecystectomie", "cholecystectomie", "Cholecystite", "Cholecystectomie programmée", "Cholecystectomie refroidie", "Cholescystectomie", "Cheolecystectomie", "cholécystectomie coeli", "cholécystectomie par laparotomie", "cholécystectomie par coelioscopie", "Cholécystectomie + spyglass calcul enclavé VBP", "Cholécystectomoie coelioscopie", "Cholecystite", "cholangio", "Cholangio") ~ "Cholécystectomie",
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Surrénalectomie G coelio", "Surrénalectomie D coelio", "Surrénale coelio", "Surrénalectomie", "Surrénalectomie G", "surrénalectomie", "Surrénale Gauche", "Surrénale gauche", "surrenale droite coelio", "surrenale gauche coelio") ~ "Surrénalectomie (coelio)",
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Surrénalectomie gauche robot", "Surrénalectomie G robot", "surrénalectomie D robot", "Surrénale robot", "surrénale robot", "surrenalectomie droite robot") ~ "Surrénalectomie (robot)",
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Surrénalectomie laparo", "Surrénalectomie laparotomie") ~ "Surrénalectomie (laparo)",
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("colectomie G coelio", "colectomie g coelio", "colectomie guache coelio", "colectomie aguche") ~ "Colectomie gauche (coelio)",
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("colectomie G laparo", "colectomie G laparo pour volvulus", "Colectomie G", "Colectomie G coelio", "Colectomie G laparo", "Colectomie G laparo pour volvulus", "Colectomie G laparo volvulus", "Colon G laparo", "Colon G + RIC laparo") ~ "Colectomie gauche (laparo)",
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Colon droit", "Côlon droit", "colectomie Dte coelio (plutot RIC)", "colon G", "colon gauche converti") ~ "Colectomie droite (coelio)", # par défaut coelio
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("colostomie coelio", "Colosotomie", "coleostomie coelio") ~ "Colostomie (coelio)",
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Cure HH", "Cure HI", "Cure HIG coelio", "Cure HH robot", "cure HH robot") ~ "Cure hernie hiatale",
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Cure RGO", "Cure de RGO") ~ "Cure hernie hiatale",
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Cure de hernie étranglée", "cure de hernie omblicale lol") ~ "Cure hernie ombilicale",
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("curage cervical", "Curage cervical", "curage GG") ~ "Curage ganglionnaire",
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("colectomie + vessie coelio") ~ "Colectomie (coelio)",
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("colectomie laparo") ~ "Colectomie (laparo)",
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("GT", "GT coelio") ~ "SPG (coelio)",
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("explo des qutre sites") ~ "Exploration des 4 sites",
-      TRUE ~ INTERVENTION_GROUPÉE
-    )
-  )
-df <- df %>%
-  mutate(
-    INTERVENTION_GROUPÉE = case_when(
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Babcok", "Baulieu", "Recoupe Beaulieu") ~ "2e temps colo-anale différée",
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Hepatectomie droite", "Hepatectomie droite coelio", "Hepatectomie droite cœlio", "Hépatectomie D coelio", "Hépatectomie droite par laparotomie", "Hépatectomie droite par voie ant") ~ "Hépatectomie majeure (laparo)",
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Hepatectomie gauche", "Hépatectomie gauche", "Hepatectomie gauche avec curage ganglionnaire", "Hepatectomie gauche avec anastomose bd", "Hepatectomie gauche + double dérivation") ~ "Hépatectomie majeure (laparo)",
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Hepatectomie gauche robot") ~ "Hépatectomie majeure (robot)",
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Hepatectomie partielle du S4 robotique", "Hépatec IV/V robot", "Résection hépatique atypique par robot S6") ~ "Hépatectomie mineure (robot)",
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Hepatectomies partielles multiples coelio", "segment VIII coelio", "Métastasectomie segment VIII coelio", "Resection atypique coelio (sgt III)", "Resection atypique coelio (sgt VIII)", "Resection atypique coelio métastases dôme hépatique", "Resection atypique secteur posterieur", "Resection atypique segment II", "Résection partielle atypique SVI-VII pour métastase synchrone par coelio") ~ "Hépatectomie mineure (coelio)",
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Re-hépatectomies partielles + RF pour métastases hépatiques", "Resections hépatiques H765'4A'", "Resection hep atypique : méta bord du II", "Résection atypique + micro onde", "Résection de lésion ganglionnaire + radiofréquence S2 par laparotomie", "resection atypique hép laparo", "Resection atypique pour Meta", "Resection atypique et ablation nodule psoas") ~ "Hépatectomie mineure (laparo)",
-      TRUE ~ INTERVENTION_GROUPÉE
-    )
-  )
-df <- df %>%
-  mutate(
-    INTERVENTION_GROUPÉE = case_when(
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c(
-        "Surrénalectomie", "Surrénalectomie G", "Surrénalectomie D coelio", "Surrénalectomie G coelio", "Surrénale coelio", 
-        "surrénalectomie", "Surrénale gauche", "Surrénale Gauche", "surrenale gauche coelio", "surrenale droite coelio"
-      ) ~ "Surrénalectomie (coelio)",
-      
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c(
-        "Surrénalectomie G robot", "Surrénalectomie gauche robot", "surrénale robot", "surrénalectomie D robot", "surrenalectomie droite robot"
-      ) ~ "Surrénalectomie (robot)",
-      
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c(
-        "Surrénalectomie laparo", "Surrénalectomie laparotomie"
-      ) ~ "Surrénalectomie (laparo)",
-      
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c(
-        "colectomie G coelio", "Colectomie G coelio", "Colectomie Dte coelio (plutot RIC)", "colectomie guache coelio",
-        "Colectomie G", "colectomie G", "colectomie aguche", "colon G", "Colon G + RIC laparo", "Colon G laparo", 
-        "colon gauche converti", "colectomie + vessie coelio", "Colectomie G laparo pour volvulus", "Colectomie G laparo volvulus"
-      ) ~ "Colectomie gauche (coelio)",
-      
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c(
-        "colectomie G laparo", "Colectomie G laparo", "Colon G laparo"
-      ) ~ "Colectomie gauche (laparo)",
-      
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c(
-        "colectomie laparo", "colectomie + vessie coelio"
-      ) ~ "Colectomie (laparo)",
-      
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c(
-        "Colosotomie", "coleostomie coelio"
-      ) ~ "Colostomie (coelio)",
-      
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c(
-        "Ilésostomie de dérivation"
-      ) ~ "Iléostomie (laparo)",
-      
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c(
-        "ReRIC"
-      ) ~ "Reprise chirurgicale",
-      
-      INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c(
-        "Retablissiment de hartman", "rétablissimenet de hartman"
-      ) ~ "Rétablissement de continuité",
+      # ✅ PMO (prélèvement multi-organes)
+      str_detect(INTERVENTION, regex(
+        "PMO|don.*vivant|donneur vivant|Back Table|explantation",
+        ignore_case = TRUE)) ~ "Prélèvement multi-organes",
       
       TRUE ~ INTERVENTION_GROUPÉE
     )
@@ -2805,176 +2245,777 @@ df <- df %>%
 
 
 df <- df %>%
-  mutate(INTERVENTION_GROUPÉE = case_when(
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Occlusion sur bride", "Coelio occlusion sur bride", "Occusion sur bride coelio", "Occlusion adhérences postop", "Occlusion sur eventration étranglée", "Syndrome occlusif sur bride, ehler danlos") ~ "Occlusion sur bride",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Eviscération", "evisceration", "eviscération", "Cure d' évisceration couverte étranglée", "Cure d'éviscération") ~ "Éviscération",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Hernie Liechtenstein") ~ "Cure hernie inguinale (Lichtenstein)",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Ablation anneau gastrique", "Ablation anneau gatsrqiue", "ablation anneau gastrique + Toupet") ~ "Ablation anneau gastrique",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Cholécystite") ~ "Cholécystectomie",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Cure d'eventration", "Eventration", "Eventration ligne blanche", "Eventration médiane", "Cure d'éventation", "Cure d'éventratation", "Cure d'évetration") ~ "Cure d'éventration",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Embolisation portale", "embolisation portale percutanée") ~ "Embolisation portale",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Hernie TAP") ~ "Cure hernie pariétale (TAP)",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Hernie bilat coelio", "Hernie bilatérale coelio", "Hernie unilatérale coelio") ~ "Cure hernie inguinale coelio",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Prolapsus rectal") ~ "Rectopexie (coelio)",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Réfection stomie", "Résinsertion stomie", "Réfection pied de l'anse") ~ "Reprise chirurgicale",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("TP") ~ "Transplantation pancréatique",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("resection de diverticule oesophage Robo", "Diverticule oesophagien robot", "stripping oesophage", "Achalasie") ~ "Myotomie de Heller / diverticulectomie (robot)",
-    TRUE ~ INTERVENTION_GROUPÉE
-  ))
+  mutate(
+    INTERVENTION_GROUPÉE = case_when(
+      # ✅ SPG (pancréatectomie gauche)
+      str_detect(INTERVENTION, regex("SPG.*robot|pancréatectomie.*gauche.*robot|PG robot|PG Warshaw|Appleby.*robot", ignore_case = TRUE)) ~ "Pancreatectomie gauche SPG (robot)",
+      str_detect(INTERVENTION, regex("SPG.*laparo|pancréatectomie.*gauche.*laparo|PG laparo|Appleby.*laparo", ignore_case = TRUE)) ~ "Pancreatectomie gauche SPG (laparo)",
+      str_detect(INTERVENTION, regex("SPG|spléno[- ]?pancréatectomie|PG|Appleby|RAMPS", ignore_case = TRUE)) ~ "Pancreatectomie gauche SPG (coelio)",
+      
+      # ✅ DPC / DPT avec abords
+      str_detect(INTERVENTION, regex("DPC.*robot|Pancréatectomie céphalique.*robot|DPT.*robot", ignore_case = TRUE)) ~ "Pancreatectomie céphalique DPC / DPT (robot)",
+      str_detect(INTERVENTION, regex("DPC.*coelio|DPT.*coelio", ignore_case = TRUE)) ~ "Pancreatectomie céphalique DPC / DPT (coelio)",
+      str_detect(INTERVENTION, regex("DPC.*reconstruction veineuse|DPC.*résection veineuse|DPC.*tronculaire", ignore_case = TRUE)) ~ "Pancreatectomie céphalique DPC / DPT (reconstruction veineuse)",
+      str_detect(INTERVENTION, regex("DPC|Pancréatectomie céphalique|DPT", ignore_case = TRUE)) ~ "Pancreatectomie céphalique DPC / DPT (laparo)",
+      
+      # ✅ Reprise pancréatectomie
+      str_detect(INTERVENTION, regex("Reprise.*DPC", ignore_case = TRUE)) ~ "Reprise pancréatectomie",
+      
+      # ✅ Pancreatectomie gauche Appleby (laparo par défaut)
+      str_detect(INTERVENTION, regex("Appleby|pancréatectomie.*gauche.*Appleby", ignore_case = TRUE)) ~ "Pancreatectomie gauche Appleby (laparo)",
+      
+      # ✅ Pancreatectomie centrale (coelio par défaut)
+      str_detect(INTERVENTION, regex("pancréatectomie.*centrale", ignore_case = TRUE)) ~ "Pancreatectomie centrale (coelio)",
+      
+      # ✅ Duodénectomie
+      str_detect(INTERVENTION, regex("duodénec", ignore_case = TRUE)) ~ "Duodénectomie",
+      
+      # ✅ Pancreatectomie totale
+      str_detect(INTERVENTION, regex("pancréatectomie totale", ignore_case = TRUE)) ~ "Pancreatectomie totale",
+      
+      # ✅ Filet résiduel
+      str_detect(INTERVENTION, regex("pancr|DPC|DPT|SPG|RAMPS|Appleby|duodénec", ignore_case = TRUE)) ~ "Pancréas - autre",
+      
+      TRUE ~ INTERVENTION_GROUPÉE
+    )
+  )
 
+#BLOC FOIE
 df <- df %>%
-  mutate(INTERVENTION_GROUPÉE = case_when(
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("AAP", "AAP + Taylor") ~ "Amputation abdomino-périnéale",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Abcès", "Abcès abdo", "Péritonite biliaire sur plaie VBP", "Péritonite biliaire, cholécystectomie", "Péritonite généralisée", "Péritonite sur plaie du grêle", "Peritonite sur lachage anastomotique", "Peritonite sur perforation de grele carcinose") ~ "Drainage chirurgical",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Ablation phéochomocytome (récidive)", "Surrénalectomie gauche pour paragangliome") ~ "Surrénalectomie (laparo)",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Amput AP", "Amputation abdopérinéale") ~ "Amputation abdomino-périnéale",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Anastomose coronaro cave", "Anastomose porto cave", "Dérivation portocave ( anastomose mésenterioco-cave) avec greffon veineux et Goretex interposé") ~ "Anastomose vasculaire complexe",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Boulectomie") ~ "Exérèse sous-cutanée",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Courage ganglionnaire lomboaortique par coelioscopie", "curage cervical", "Curage cervical", "curage GG") ~ "Curage ganglionnaire",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("DPT", "DPT laparo avec résection tronculaire VMS", "DPT robot dont anastomoses bilio-dig et pancréatique, conversion pour gastro-jéjunale") ~ "Pancréatectomie céphalique (divers)",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Dilatation anastomose reno-porte") ~ "Anastomose vasculaire complexe",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Diversion duodénale", "Dérivation gastro-jéjunale", "dérivation gastrojujenal") ~ "Dérivation digestive",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Désobstruction portale") ~ "Anastomose vasculaire complexe",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Exam anal AG") ~ "Examen anal",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Exerese lésion cutanée", "exérèse mélanome anal", "exerese gg axillaire") ~ "Exérèse sous-cutanée",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Extraction corps etranger", "extraction CE intra rectal") ~ "Examen anal",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Exérèse adénome lobe 2 hépatique") ~ "Hépatectomie mineure (laparo)",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Exérèse paragangliome D", "Paragangliome", "Paragangliome latéroaortique") ~ "Surrénalectomie (laparo)",
-    TRUE ~ INTERVENTION_GROUPÉE
-  ))
+  mutate(
+    INTERVENTION_GROUPÉE = case_when(
+      # ✅ Hépatectomie majeure détaillée
+      str_detect(INTERVENTION, regex(
+        "Hépatectomie.*droite|Héptectomie.*droite|Hepatectomie.*droite|
+         Hépatectomie.*gauche.*élargie|centrale|totale|
+         H4'5'6'7'8'|H765|Seg.*IV/V|Seg.*VIII|H23|Hépatec IV/V",
+        ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("robot", ignore_case = TRUE)) ~ "Hépatectomie majeure (robot)",
+      
+      str_detect(INTERVENTION, regex(
+        "Hépatectomie.*droite|Héptectomie.*droite|Hepatectomie.*droite|
+         Hépatectomie.*gauche.*élargie|centrale|totale|
+         H4'5'6'7'8'|H765|Seg.*IV/V|Seg.*VIII|H23|Hépatec IV/V",
+        ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("coelio|H23", ignore_case = TRUE)) ~ "Hépatectomie majeure (coelio)",
+      
+      # ✅ Cas motifs résiduels H'6 avec ou sans Hartmann
+      str_detect(INTERVENTION, regex("H'?6", ignore_case = TRUE)) ~ "Hépatectomie majeure (laparo)",
+      
+      # 🔹 Cas spécifique : Hépatectomie Dte + anastomose bilio dig
+      str_detect(INTERVENTION, regex("h[ée]patectomie.*d(te|roite).*anastomose.*bilio", ignore_case = TRUE)) ~ "Hépatectomie majeure (laparo)",
+      
+      # 🔹 Tous les motifs de kyste hépatique résiduels
+      str_detect(INTERVENTION, regex("kyste.*h[ée]patique|kystique.*h[ée]patique|fenestration.*kyste", ignore_case = TRUE)) ~ "Fenestration kyste hépatique (coelio)",
+      
+      # 🔹 Ré-hépatectomie / Re-hépatectomie
+      str_detect(INTERVENTION, regex("re[- ]?h[ée]patectom", ignore_case = TRUE)) ~ "Ré-hépatectomie",
+      
+      str_detect(INTERVENTION, regex("Resection atypique hepatique", ignore_case = TRUE)) ~ "Hépatectomie mineure (laparo)",
+      
+      # ✅ Tumorectomies hépatiques coelio
+      str_detect(INTERVENTION, regex("tumorectomies.*h[ée]patiques.*coelio", ignore_case = TRUE)) ~ "Hépatectomie mineure (coelio)",
+      
+      str_detect(INTERVENTION, regex("h[ée]patectomie.*(droite|Dte).*anastomose.*bilio", ignore_case = TRUE)) ~ "Hépatectomie majeure (laparo)",
+      
+      str_detect(INTERVENTION, regex(
+        "Hépatectomie.*droite|Héptectomie.*droite|Hepatectomie.*droite|
+         Hépatectomie.*gauche.*élargie|centrale|totale|
+         H4'5'6'7'8'|H765|Seg.*IV/V|Seg.*VIII|H23|Hépatec IV/V",
+        ignore_case = TRUE)) ~ "Hépatectomie majeure (laparo)",
+      
+      # ✅ Hépatectomie mineure détaillée
+      str_detect(INTERVENTION, regex(
+        "wedge|secteur|segmentectomie|segmenctectomie|unisegmentectomie|
+         résection atypique|Resection.*hep.*atypique|RF nodule hépatique|
+         Métastasectomie|Résection hep atypique|Résection hep.*méta bord du II|
+         Résection hépatique Seg V.*VIII|Hepatectomie partielle|Hepatectomies partielles multiples",
+        ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("robot|S6", ignore_case = TRUE)) ~ "Hépatectomie mineure (robot)",
+      
+      # ✅ Sectoriectomie antérieure
+      str_detect(INTERVENTION, regex("sectoriectomie.*antérieure", ignore_case = TRUE)) ~ "Hépatectomie mineure (laparo)",
+      
+      # ✅ Sectoriectomie postérieure robot
+      str_detect(INTERVENTION, regex("sectoriectomie.*postérieure.*robot", ignore_case = TRUE)) ~ "Hépatectomie mineure (robot)",
+      
+      # ✅ Résection atypique et ablation nodule psoas
+      str_detect(INTERVENTION, regex("résection.*atypique.*nodule.*psoas", ignore_case = TRUE)) ~ "Hépatectomie mineure (coelio)",
+      
+      # ✅ Résection atypique pour Meta
+      str_detect(INTERVENTION, regex("résection.*atypique.*meta", ignore_case = TRUE)) ~ "Hépatectomie mineure (coelio)",
+      
+      str_detect(INTERVENTION, regex(
+        "wedge|secteur|segmentectomie|segmenctectomie|unisegmentectomie|
+         résection atypique|Resection.*hep.*atypique|RF nodule hépatique|
+         Métastasectomie|Résection hep atypique|Résection hep.*méta bord du II|
+         Résection hépatique Seg V.*VIII|Hepatectomie partielle|Hepatectomies partielles multiples",
+        ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("coelio|micro ondes", ignore_case = TRUE)) ~ "Hépatectomie mineure (coelio)",
+      
+      str_detect(INTERVENTION, regex(
+        "wedge|secteur|segmentectomie|segmenctectomie|unisegmentectomie|
+         résection atypique|Resection.*hep.*atypique|RF nodule hépatique|
+         Métastasectomie|Résection hep atypique|Résection hep.*méta bord du II|
+         Résection hépatique Seg V.*VIII|Hepatectomie partielle|Hepatectomies partielles multiples",
+        ignore_case = TRUE)) ~ "Hépatectomie mineure (laparo)",
+      
+      # ✅ Lobectomie gauche spécifique
+      str_detect(INTERVENTION, regex("lobectomie.*gauche|Lobectomie G|Lobectomie gauche.*convertie|Lobectomie gauche donneur", ignore_case = TRUE)) ~ "Lobectomie gauche",
+      
+      # ✅ Réparation biliaire (motifs étendus)
+      str_detect(INTERVENTION, regex(
+        "réparation.*bili|anastomose.*bd|bilio biliaire|voie biliaire|
+         Réfection anastomose bilio|Résection VBP|VBP|Redo anastomose bilio-digestive",
+        ignore_case = TRUE)) ~ "Réparation biliaire",
+      
+      # ✅ Explantation hépatique + back table + reprise post TH
+      str_detect(INTERVENTION, regex("explantation.*h[ée]patique|bac table TH|reprise post TH", ignore_case = TRUE)) ~ "Explantation hépatique",
+      
+      # ✅ Double dérivation
+      str_detect(INTERVENTION, regex("double dérivation", ignore_case = TRUE)) ~ "Hépatectomie complexe (double dérivation)",
+      
+      # ✅ Curage si non encore pris ailleurs
+      str_detect(INTERVENTION, regex("curage.*ganglionnaire", ignore_case = TRUE)) ~ "Curage ganglionnaire",
+      
+      # ✅ Cas Hépatectomie Dte + anastomose bilio dig
+      str_detect(INTERVENTION, regex("hépatectomie.*droite.*anastomose bilio", ignore_case = TRUE)) ~ "Hépatectomie majeure (laparo)",
+      
+      # ✅ Résection atypique variantes détaillées
+      str_detect(INTERVENTION, regex(
+        "résection partielle atypique|résection atypique.*psoas|résection atypique pour meta|
+         résection atypique coelio|résection atypique hépatique|résection atypique.*segment|
+         résection atypique du VII|résection atypique SVI|résection atypique SVI-VII|
+         résection atypique.*micro onde|résection atypique.*sgt",
+        ignore_case = TRUE)) ~ "Hépatectomie mineure (coelio)",
+      
+      # ✅ Sectoriectomie postérieure coelio
+      str_detect(INTERVENTION, regex("sectoriectomie.*postérieure.*coelio", ignore_case = TRUE)) ~ "Hépatectomie mineure (coelio)",
+      
+      # ✅ Hépatectomie gauche robot isolée
+      str_detect(INTERVENTION, regex("hépatectomie gauche.*robot", ignore_case = TRUE)) ~ "Hépatectomie majeure (robot)",
+      
+      # ✅ H6', H4'5'6'7'8' + cholécystectomie etc.
+      str_detect(INTERVENTION, regex("H6'|H45|H458|H4'5'6'7'8'|H8'", ignore_case = TRUE)) ~ "Hépatectomie majeure (laparo)",
+      
+      str_detect(INTERVENTION, regex ("résection atypique hép laparo", ignore_case = TRUE)) ~ "Hépatectomie mineure (laparo)",
+      
+      str_detect(INTERVENTION, regex("Sectoriectomie anterieure", ignore_case = TRUE)) ~ "Hépatectomie mineure (laparo)",
+      
+      str_detect(INTERVENTION, regex("Resection atypique et ablation nodule psoas", ignore_case = TRUE)) ~ "Hépatectomie mineure (laparo)",
+      
+      str_detect(INTERVENTION, regex("Resection atypique pour meta", ignore_case = TRUE)) ~ "Hépatectomie mineure (laparo)",
+      
+      # ✅ Fenestration kyste variantes
+      str_detect(INTERVENTION, regex(
+        "fenestration.*kyste|fenestration.*biliaire|fenestration.*h[ée]patique",
+        ignore_case = TRUE)) ~ "Fenestration kyste hépatique (coelio)",
+      
+      # ✅ Réfection anastomose bilio-dig
+      str_detect(INTERVENTION, regex(
+        "réfection anastomose bilio", ignore_case = TRUE)) ~ "Réparation biliaire",
+      
+      # ✅ Sectoriectomie postérieure coelio (doublon safety)
+      str_detect(INTERVENTION, regex(
+        "sectoriectomie.*postérieure.*coelio", ignore_case = TRUE)) ~ "Hépatectomie mineure (coelio)",
+      
+      # ✅ Résection hépatique atypique par robot S6
+      str_detect(INTERVENTION, regex("résection.*atypique.*robot S6", ignore_case = TRUE)) ~ "Hépatectomie mineure (robot)",
+      
+      # ✅ Résection hépatique coelio + micro ondes
+      str_detect(INTERVENTION, regex("résection.*hépatique.*coelio.*micro ondes", ignore_case = TRUE)) ~ "Hépatectomie mineure (coelio)",
+      
+      # ✅ Résection atypique + micro onde (tous formats)
+      str_detect(INTERVENTION, regex("résection.*atypique.*micro onde", ignore_case = TRUE)) ~ "Hépatectomie mineure (coelio)",
+      
+      # ✅ Résection atypique coelio métastases dôme hépatique
+      str_detect(INTERVENTION, regex("résection.*atypique.*coelio.*métastases.*d[ôo]me", ignore_case = TRUE)) ~ "Hépatectomie mineure (coelio)",
+      
+      # ✅ Résection atypique du VII
+      str_detect(INTERVENTION, regex("résection.*atypique.*VII", ignore_case = TRUE)) ~ "Hépatectomie mineure (coelio)",
+      
+      # ✅ Résection atypique et ablation nodule psoas
+      str_detect(INTERVENTION, regex("résection.*atypique.*nodule.*psoas", ignore_case = TRUE)) ~ "Hépatectomie mineure (coelio)",
+      
+      # ✅ Résection atypique pour Meta
+      str_detect(INTERVENTION, regex("résection.*atypique.*meta", ignore_case = TRUE)) ~ "Hépatectomie mineure (coelio)",
+      
+      # ✅ Hepatectomie gauche + anastomose bilio-dig
+      str_detect(INTERVENTION, regex("h[ée]patectomie.*gauche.*anastomose.*bilio", ignore_case = TRUE)) ~ "Hépatectomie majeure (laparo)",
+      
+      # ✅ 1er temps ALPPS
+      str_detect(INTERVENTION, regex("1[èe]re temps.*ALPPS|ALPPS", ignore_case = TRUE)) ~ "Hépatectomie majeure (laparo)",
+      
+      # ✅ Hépatectomie D coelio
+      str_detect(INTERVENTION, regex("h[ée]patectomie.*D coelio|h[ée]ptectomie.*droite.*coelio", ignore_case = TRUE)) ~ "Hépatectomie majeure (coelio)",
+      
+      # ✅ Hépatectomie gauche isolée (pas déjà matchée)
+      str_detect(INTERVENTION, regex("^h[ée]patectomie gauche$", ignore_case = TRUE)) ~ "Hépatectomie majeure (laparo)",
+      
+      # ✅ Hépatectomie gauche robot isolée
+      str_detect(INTERVENTION, regex("^h[ée]patectomie gauche.*robot$", ignore_case = TRUE)) ~ "Hépatectomie majeure (robot)",
+      
+      # ✅ Re-hépatectomie partielle
+      str_detect(INTERVENTION, regex("Re-h[ée]patectomie.*partielle", ignore_case = TRUE)) ~ "Hépatectomie mineure (laparo)",
+      
+      # ✅ Drainage ou ponction abcès hépatique
+      str_detect(INTERVENTION, regex("ponction.*abcès.*h[ée]patique|drainage.*abcès.*h[ée]patique", ignore_case = TRUE)) ~ "Drainage abcès hépatique",
+      
+      # ✅ RF isolé pour métastase hépatique
+      str_detect(INTERVENTION, regex("RF.*h[ée]patique", ignore_case = TRUE)) ~ "Hépatectomie mineure (laparo)",
+      
+      # 🔹 Hépatectomies centrales, élargies, sous-segmentectomies, bisegmentectomies, wedges résiduels
+      str_detect(INTERVENTION, regex(
+        "h[ée]patectomie.*centrale|h[ée]patectomie.*gauche.*double dérivation|h[ée]patectomie.*gauche.*secteur ant|h[ée]patectomie.*gauche.*voie biliaire|
+   re[- ]?h[ée]patectomies.*partielles|re[- ]?h[ée]patectomie.*partielle|wedge.*h[ée]patique|wedge.*segment|sous.*segmentectomie|bisegmentectomie|
+   segmenctectomie|segmentectomie|unisegmentectomie|resections.*h[ée]patiques",
+        ignore_case = TRUE)
+      ) ~ "Hépatectomie mineure (laparo)",
+      
+      TRUE ~ INTERVENTION_GROUPÉE
+    )
+  )
 
+#BLOC VÉSICULES
 df <- df %>%
-  mutate(INTERVENTION_GROUPÉE = case_when(
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Fenestration kystique") ~ "Drainage chirurgical",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("GIST", "gastrec partielle pour GIST") ~ "Gastrectomie partielle",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Gastrotomie pour 2 boulettes") ~ "Exérèse sous-cutanée",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("H234 Hépatectomie gauche coelioscopie", "H458 + curage", "Hépatectomie gauche", "Hépatectomie gauche + double dérivation", "Hépatectomie gauche et résection de la voie biliaire", "Hepatectomie gauche + anastomose biliodig", "Hepatectomie gauche avec anastomose bd", "Hepatectomie gauche avec curage ganglionnaire") ~ "Hépatectomie majeure (coelio)",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("H6' coelio", "HO coelio") ~ "Hépatectomie mineure (coelio)",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("HPT2") ~ "Biopsie hépatique",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Hepatectomie droite", "Hepatectomie droite cœlio", "Hepatectomie droite coelio") ~ "Hépatectomie majeure (coelio)",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Hepatectomie droite elargie au 4 + 1 + resection anastoose veneuse", "Hepatectomie droite elargie au sect ant + curage ganglionnaire+abd", "Hepatectomie droite par laparotomie", "Hepatectomie droite par voie ant") ~ "Hépatectomie majeure (laparo)",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Hepatectomie partielle du S4 robotique", "Hépatectomie atypique par robot S6") ~ "Hépatectomie mineure (robot)",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Hepatectomies partielles multiples coelio", "Re-hépatectomies partielles + RF pour métastases hépatiques") ~ "Hépatectomie mineure (coelio)",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Hernie crurale étranglée", "Hernie fémorale", "Hernie interne côlon gauche") ~ "Cure hernie pariétale",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Ilésostomie de dérivation") ~ "Iléostomie (coelio)",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Lap explo + résection nodule coupole diaph", "Laparo pour hémostase", "Laparo carcinose") ~ "Laparotomie exploratrice",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Laparo diverticule duodénum") ~ "Exérèse digestive",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Laparo gastrostomie") ~ "Gastrostomie",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Laparotomie- resection de fibrome") ~ "Reprise chirurgicale",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Lobectomie G coelio convertie") ~ "Loboisthmectomie thyroïdienne",
-    TRUE ~ INTERVENTION_GROUPÉE
-  ))
+  mutate(
+    INTERVENTION_GROUPÉE = case_when(
+      # ✅ Bloc cholécystectomie coelio explicite
+      str_detect(INTERVENTION, regex(
+        "chol[eé]cystectomie|cholescystectomie|cheolecystectomie|v[ée]sicule|chol[eé]cystite|lavage.*chol[eé]cystectomie",
+        ignore_case = TRUE)) & 
+        str_detect(INTERVENTION, regex("coelio|coelioscopie", ignore_case = TRUE)) ~ "Cholécystectomie (coelio)",
+      
+      # ✅ Bloc cholécystectomie laparo explicite
+      str_detect(INTERVENTION, regex(
+        "chol[eé]cystectomie|cholescystectomie|cheolecystectomie|v[ée]sicule|chol[eé]cystite|lavage.*chol[eé]cystectomie",
+        ignore_case = TRUE)) & 
+        str_detect(INTERVENTION, regex("laparo", ignore_case = TRUE)) ~ "Cholécystectomie (laparo)",
+      
+      # ✅ Bloc cholécystectomie coelio par défaut si pas d'abord explicite
+      str_detect(INTERVENTION, regex(
+        "chol[eé]cystectomie|cholescystectomie|cheolecystectomie|v[ée]sicule|chol[eé]cystite|lavage.*chol[eé]cystectomie",
+        ignore_case = TRUE)) ~ "Cholécystectomie (coelio)",
+      
+      str_detect(INTERVENTION, regex("lavage.*chol[eé]cystectomie", ignore_case = TRUE)) ~ "Cholécystectomie (coelio)",
+      
+      # ✅ Sinon on laisse tel quel
+      TRUE ~ INTERVENTION_GROUPÉE
+    )
+  )
 
+# ✅ Bloc COU complet (corrigé)
 df <- df %>%
-  mutate(INTERVENTION_GROUPÉE = case_when(
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Occlusion adhérences postop", "Occlusion sur bride", "Coelio occlusion sur bride", "Occusion sur bride coelio", "Section bride coelio") ~ "Occlusion sur bride",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Occlusion hernie interne", "Occlusion sur eventration étranglée", "Syndrome occlusif sur bride, ehler danlos") ~ "Occlusion sur bride",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Oesophagectomie LS") ~ "Œsophagectomie de Lewis Santy",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Omphalectomie") ~ "Exérèse sous-cutanée",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("PG", "PG Warshaw", "PG robot") ~ "SPG (robot)",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Pancreatectomie gauche", "Pancreatectomie gauche et patch peritoine sur le diaphragme", "Pancreatectomie gauche laparo") ~ "Pancréatectomie gauche (laparo)",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Paragangliome", "Paragangliome latéroaortique", "Surrénalectomie gauche pour paragangliome") ~ "Surrénalectomie (coelio)",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Plaie abdo arme blanche perfo estomac", "Plaie arme à feu") ~ "Laparotomie exploratrice",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Pose de pansement intrabdominal") ~ "Drainage chirurgical",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Prolpasus stomial") ~ "Reprise chirurgicale",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Péritonite biliaire sur plaie VBP", "Péritonite biliaire, cholécystectomie", "Péritonite sur plaie du grêle", "Péritonite génélarisée") ~ "Reprise chirurgicale",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("RF nodule hépatique") ~ "Hépatectomie mineure (laparo)",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Redo anastomose bilio-digestive", "Réfection anastomose bilio-dig", "Réparation biliaire sur canaux hépatique", "Réparation biliiare", "réfection anastomose biliodig laparo") ~ "Reprise bilio-digestive",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Resection de Meckel", "Resection de la VBP") ~ "Résection de grêle",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Resection et refection anastomose grelo grelique") ~ "Résection de grêle",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Resection iléo caecale") ~ "Résection iléo-caecale (coelio)",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Resection jabot laparo") ~ "Exérèse digestive",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Résinsertion stomie") ~ "Reprise chirurgicale",
-    TRUE ~ INTERVENTION_GROUPÉE
-  ))
+  mutate(
+    INTERVENTION_GROUPÉE = case_when(
+      # TT
+      str_detect(INTERVENTION, regex("TT|thyro[iï]dectomie totale|totalisation.*thyro[iï]dectomie", ignore_case = TRUE)) ~ "Thyroïdectomie totale",
+      str_detect(INTERVENTION, regex("Thyroïde", ignore_case = TRUE)) ~ "Thyroïdectomie totale",
+      str_detect(INTERVENTION, regex("Thyreoidectomie", ignore_case = TRUE)) ~ "Thyroïdectomie totale",
+      # Lobo-isthmectomie
+      str_detect(INTERVENTION, regex("lobo[- ]?isthmectomie|isthmectomie|lobo[- ]?isthmo|Lobo-isthmetomie gauche|lobo", ignore_case = TRUE)) ~ "Lobo-isthmectomie",
+      # Parathyroïdes incluant 4 sites et abréviations
+      str_detect(INTERVENTION, regex("parathyro[iï]de|parathyroidectomie|parathyr|para|PT|HPT|P[3-4]|4 sites|explo.*4 sites|exploration.*4 sites|examen.*4 sites", ignore_case = TRUE)) ~ "Parathyroïdectomie",
+      str_detect(INTERVENTION, regex("explo des qutre sites", ignore_case = TRUE)) ~ "Parathyroïdectomie",
+      
+      TRUE ~ INTERVENTION_GROUPÉE
+    )
+  )
 
+#Blocs HERNIES 
 df <- df %>%
-  mutate(INTERVENTION_GROUPÉE = case_when(
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Secteuriectomie posterieure par laparotomie", "Segmenctectomie partielle 4", "Segmenctectomie partielle 5/6") ~ "Hépatectomie mineure (laparo)",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("TT cervicotomie", "TT redux") ~ "Thyroïdectomie totale",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Trachéotomie") ~ "Autre ORL",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Volvulus du caecum sur mésentère commun incomplet", "Volvulus du grele") ~ "Occlusion sur bride",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("Zenker") ~ "Diverticule œsophagien",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("abdominoplastie") ~ "Autre paroi",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("ablation anneau gastrique + Toupet") ~ "Anneau gastrique",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("caecostomie abord direct") ~ "Stomie digestive",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("cholecystectomie partielle", "cholescystectomie", "vésicule", "vésicule de l'enfer") ~ "Cholécystectomie",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("colopharyngo", "Phryngo-gastroplastie") ~ "Œsophagectomie 3 voies",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("débulking pseudomyxome") ~ "Cytoréduction (laparo)",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("décaillotage") ~ "Drainage chirurgical",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("démontage gastroplastie") ~ "Reprise bariatrique",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("dérivation gastrojujenal", "Diversion duodénale", "Dérivation gastro-jéjunale") ~ "Dérivation digestive",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("embolisation portale percutanée", "Embolisation portale") ~ "Embolisation portale",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("endosponge anal") ~ "Examen anal",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("eventration diaphragmatique") ~ "Cure éventration",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("evisceration", "eviscération") ~ "Eviscération",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("exerese gg axillaire") ~ "Curage ganglionnaire",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("exerese sigmoido rectale coelio") ~ "Colectomie gauche (coelio)",
-    TRUE ~ INTERVENTION_GROUPÉE
-  ))
+  mutate(
+    INTERVENTION_GROUPÉE = case_when(
+      # ✅ Cure RGO (robot)
+      str_detect(INTERVENTION, regex("HH|Nissen|RGO", ignore_case = TRUE)) & 
+        str_detect(INTERVENTION, regex("robot", ignore_case = TRUE)) ~ "Cure RGO (robot)",
+      
+      # ✅ Cure RGO (coelio) sinon
+      str_detect(INTERVENTION, regex("HH|Nissen|RGO", ignore_case = TRUE)) ~ "Cure RGO (coelio)",
+      
+      # ✅ Hernie inguinale (coelio) TAPP TEP
+      str_detect(INTERVENTION, regex("TAPP|TEP|Hernie bilatérale coelio|Hernie unilatérale coelio", ignore_case = TRUE)) ~ "Hernie inguinale (coelio)",
+      
+      # ✅ Hernie interne (coelio)
+      str_detect(INTERVENTION, regex("hernie.*interne", ignore_case = TRUE)) ~ "Hernie interne (coelio)",
+      
+      # ✅ Hernie ombilicale OU ligne blanche
+      str_detect(INTERVENTION, regex("HO|ombilicale|ligne blanche|pré[pé|pe]", ignore_case = TRUE)) ~ "Hernie ombilicale",
+      
+      # ✅ Hernie de Spiegel
+      str_detect(INTERVENTION, regex("Speigel|Speigle", ignore_case = TRUE)) ~ "Hernie de Spiegel",
+      
+      # ✅ Hernie fémorale (inclut crurale)
+      str_detect(INTERVENTION, regex("f[é|e]morale|crurale|curale", ignore_case = TRUE)) ~ "Hernie fémorale",
+      
+      # ✅ Hernie étranglée (si précisé sans autre site)
+      str_detect(INTERVENTION, regex("Hernie étranglée|Cure de hernie étranglée", ignore_case = TRUE)) ~ "Hernie étranglée",
+      
+      # ✅ Hernie inguinale générale (HI, HIG, Licht, Shouldice, abord direct)
+      str_detect(INTERVENTION, regex("HI|HIG|inguinale|Licht|Lichtenstein|Shouldice|abord direct|Hernie Liechtenstein", ignore_case = TRUE)) ~ "Hernie inguinale",
+      
+      # Hernie TAP explicitement mentionnée
+      str_detect(INTERVENTION, regex("hernie TAP|Hernie TAP", ignore_case = TRUE)) ~ "Hernie TAP",
+      
+      # Hernie bilatérale coelio
+      str_detect(INTERVENTION, regex("hernie bilatérale coelio|Hernie bilat coelio", ignore_case = TRUE)) ~ "Hernie inguinale (coelio)",
+      
+      # Hernie Liechtenstein
+      str_detect(INTERVENTION, regex("hern[ie|e] Liechtenstein|hernie lich", ignore_case = TRUE)) ~ "Hernie inguinale",
+      
+      # Cure récidive hernie Spiegel (avec occlusion, échec fermeture péritoine)
+      str_detect(INTERVENTION, regex("r[ée]cidive hernie Spiegel", ignore_case = TRUE)) ~ "Hernie de Spiegel",
+      
+      # Cure de hernie ombilicale (inclut variantes orthographiques et rigolotes)
+      str_detect(INTERVENTION, regex("hernie ombilicale|hernie omblicale|cure de hernie omblicale", ignore_case = TRUE)) ~ "Hernie ombilicale",
+      
+      # Hernie inguinale Lichtenstein (version courte)
+      str_detect(INTERVENTION, regex("hernie ing lich|hern[ie|e] Lichtenstein", ignore_case = TRUE)) ~ "Hernie inguinale",
+      
+      # Pour éviter doublons : conserve le codage déjà existant sinon
+      
+      # ✅ Par défaut : laisse inchangé
+      TRUE ~ INTERVENTION_GROUPÉE
+    )
+  )
 
-df <- df %>%
-  mutate(INTERVENTION_GROUPÉE = case_when(
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("explo paroi") ~ "Laparotomie exploratrice",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("extraction CE intra rectal") ~ "Examen anal",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("exérèse mélanome anal") ~ "Examen anal",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("fibrome coelio") ~ "Exérèse sous-cutanée",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("fisutle anale + lambeau") ~ "Fistule digestive",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("gastrec partielle pour GIST") ~ "Gastrectomie partielle",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("hernie TAP", "Hernie TAP") ~ "Cure hernie inguinale (coelio)",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("lobo") ~ "Loboisthmectomie thyroïdienne",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("ovariectomie bil laparo", "ovariectomie bilatérale sous coelio", "ovariectomie laparo") ~ "Annexectomie laparotomie",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("pelvectomie postérieure laparo") ~ "Pelvectomie postérieure",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("peritonite sur perforation de grele carcinose") ~ "Résection de grêle",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("protectomie secondaire") ~ "Reprise chirurgicale",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("reascension plastie + jejuno") ~ "Reprise chirurgicale",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("resection de lésion par voie de kraske") ~ "Rectum (laparo)",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("retablissiment de hartman", "rétablissimenet de hartman") ~ "Rétablissement de continuité",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("résection atypique hép laparo") ~ "Hépatectomie mineure (laparo)",
-    INTERVENTION_GROUPÉE == "Autre" & INTERVENTION %in% c("torsion testiculaire") ~ "Autre",
-    TRUE ~ INTERVENTION_GROUPÉE
-  )) %>%
-  mutate(INTERVENTION_GROUPÉE = if_else(is.na(INTERVENTION_GROUPÉE), "Autre", INTERVENTION_GROUPÉE))
 
 df <- df %>%
   mutate(
     INTERVENTION_GROUPÉE = case_when(
-      INTERVENTION %in% c("Eventration étranglée", "Cure de hernie curale étranglée", "Cure hernie curale abord direct femme", "HI etranglée", "HID étranglée") ~ "Cure hernie étranglée",
-      INTERVENTION %in% c("Duodénectomie", "Duodénectomie robot") ~ "Duodénectomie",
-      INTERVENTION == "H4'5'6'7'8'+cholécystectomie" ~ "Hépatectomie majeure (laparo)",
-      INTERVENTION == "HIG" ~ "Cure hernie hiatale",
-      INTERVENTION == "Jéjuno" ~ "Résection de grêle",
-      INTERVENTION == "KSC" ~ "Exérèse sous-cutanée",
-      INTERVENTION %in% c("Para T3 gauche abord focal", "Para abord local P3 droite", "Para abord local P3 gauche", "Para abord local P4 gauche") ~ "Exploration des 4 sites",
-      INTERVENTION == "Récidive ganglionnaire corticosurrénalome" ~ "Reprise chirurgicale",
-      INTERVENTION %in% c(
-        "Résection atypique coelio (sgt III)",
-        "Résection atypique coelio (sgt VIII)",
-        "Résection atypique coelio métastases dôme hépatique",
-        "Résection atypique secteur posterieur",
-        "Résection atypique segment II"
-      ) ~ "Hépatectomie mineure (coelio)",
-      INTERVENTION == "Résection hep atypique : méta bord du II" ~ "Hépatectomie mineure (laparo)",
-      INTERVENTION == "Résection nodule carcinose" ~ "Cytoréduction (laparo)",
-      INTERVENTION == "Résection recto-sigmoïdienne iléoprotégée par laparo pour perforation sur prolapsus" ~ "Rectum (laparo)",
-      INTERVENTION == "torsion testiculaire" ~ "Autre (non digestif)",
+      str_detect(INTERVENTION, regex(
+        "appendicite|appendicectomie|appendectomie|APP|App",
+        ignore_case = TRUE)) ~ "Appendicectomie (coelio)",
+      TRUE ~ INTERVENTION_GROUPÉE
+    )
+  )
+
+
+df <- df %>%
+  mutate(
+    INTERVENTION_GROUPÉE = case_when(
+      # ✅ Lewis Santy
+      str_detect(INTERVENTION, regex("Lewis\\s*Santy|Oesophagectomie\\s*Lewis|Lewis Santy", ignore_case = TRUE)) ~ "Lewis Santy",
+      str_detect(INTERVENTION, regex("Lewis", ignore_case = TRUE)) & str_detect(INTERVENTION, regex("robot|coelio", ignore_case = TRUE)) ~ "Lewis Santy (robot/coelio)",
+      
+      # ✅ 3 voies
+      str_detect(INTERVENTION, regex("3 voies|Oesophagectomie 3 voies", ignore_case = TRUE)) ~ "3 voies",
+      str_detect(INTERVENTION, regex("3 voies", ignore_case = TRUE)) & str_detect(INTERVENTION, regex("robot|coelio", ignore_case = TRUE)) ~ "3 voies (robot/coelio)",
+      
+      # ✅ Reprise Lewis
+      str_detect(INTERVENTION, regex("Reprise Lewis", ignore_case = TRUE)) ~ "Reprise Lewis",
+      str_detect(INTERVENTION, regex("démontage gastroplastie ", ignore_case = TRUE)) ~ "Reprise Lewis",
+      
+      # ✅ Zenker
+      str_detect(INTERVENTION, regex("Zenker", ignore_case = TRUE)) ~ "Zenker",
+      
+      # ✅ Stripping oesophage (toujours laparo)
+      str_detect(INTERVENTION, regex("Stripping oe?sophage", ignore_case = TRUE)) ~ "Stripping oesophage (laparo)",
+      
+      # ✅ Diverticule oesophagien
+      str_detect(INTERVENTION, regex("Diverticule oe?sophagien", ignore_case = TRUE)) ~ "Diverticule oesophagien",
+      
+      # ✅ Phryngo-gastroplastie
+      str_detect(INTERVENTION, regex("Phryngo-gastroplastie", ignore_case = TRUE)) ~ "Pharyngo-gastroplastie",
+      str_detect(INTERVENTION, regex("Pharyngo-gastroplastie", ignore_case = TRUE)) ~ "Phryngo-gastroplastie",
+      
+      # ✅ Coloplastie et variantes
+      str_detect(INTERVENTION, regex("coloplastie|colopharyngo|colopharyngoplastie", ignore_case = TRUE)) ~ "Coloplastie",
+      
+      # ✅ Lewis Santy
+      str_detect(INTERVENTION, regex("Lewis", ignore_case = TRUE)) ~ "Lewis Santy",
+      str_detect(INTERVENTION, regex("LS", ignore_case = TRUE)) ~ "Lewis Santy",
+      
+      # ✅ 3 voies
+      str_detect(INTERVENTION, regex("3 voies", ignore_case = TRUE)) ~ "Oesophage 3 voies",
+      str_detect(INTERVENTION, regex("Oeosphage 3 voies", ignore_case = TRUE)) ~ "Oesophage 3 voies",
+      
+      # ✅ Zenker
+      str_detect(INTERVENTION, regex("Zenker", ignore_case = TRUE)) ~ "Zenker",
+      
+      # ✅ Stripping oesophage
+      str_detect(INTERVENTION, regex("Stripping oesophage", ignore_case = TRUE)) ~ "Stripping oesophage (laparo)",
+      
+      # ✅ Diverticule oesophagien
+      str_detect(INTERVENTION, regex("Diverticule oesophagien", ignore_case = TRUE)) ~ "Diverticule oesophagien (robot)",
+      
+      # ✅ Phryngo-gastroplastie
+      str_detect(INTERVENTION, regex("Phryngo-gastroplastie", ignore_case = TRUE)) ~ "Phryngo-gastroplastie",
+      str_detect(INTERVENTION, regex("Pharyngogastroplastie", ignore_case = TRUE)) ~ "Phryngo-gastroplastie",
+      
+      # ✅ Reprise Lewis
+      str_detect(INTERVENTION, regex("Reprise Lewis", ignore_case = TRUE)) ~ "Reprise Lewis Santy",
+      
+      # ✅ Autres : laisse inchangé
+      TRUE ~ INTERVENTION_GROUPÉE
+    )
+  )
+
+
+df <- df %>%
+  mutate(
+    INTERVENTION_GROUPÉE = case_when(
+      # ✅ GT
+      str_detect(INTERVENTION, regex("GT|Gastrectomie", ignore_case = TRUE)) ~ "Gastrectomie totale (laparo)",
+      str_detect(INTERVENTION, regex("GT.*coelio", ignore_case = TRUE)) ~ "Gastrectomie totale (coelio)",
+      str_detect(INTERVENTION, regex("GT.*robot", ignore_case = TRUE)) ~ "Gastrectomie totale (robot)",
+      
+      # ✅ Gastrectomie partielle
+      str_detect(INTERVENTION, regex("Gastrectomie partielle", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("robot", ignore_case = TRUE)) ~ "Gastrectomie partielle (robot)",
+      str_detect(INTERVENTION, regex("Gastrectomie partielle", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("coelio", ignore_case = TRUE)) ~ "Gastrectomie partielle (coelio)",
+      str_detect(INTERVENTION, regex("Gastrectomie partielle", ignore_case = TRUE)) ~ "Gastrectomie partielle (laparo)",
+      
+      # ✅ Gastrectomie 4/5
+      str_detect(INTERVENTION, regex("Gastrectomie 4/5", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("robot", ignore_case = TRUE)) ~ "Gastrectomie 4/5e (robot)",
+      str_detect(INTERVENTION, regex("Gastrectomie 4/5", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("coelio", ignore_case = TRUE)) ~ "Gastrectomie 4/5e (coelio)",
+      str_detect(INTERVENTION, regex("Gastrectomie 4/5|Gastrectomie des 4/5 ème laparo  ", ignore_case = TRUE)) ~ "Gastrectomie 4/5e (laparo)",
+      
+      # ✅ Gastrectomie atypique
+      str_detect(INTERVENTION, regex("Gastrectomie atypique|gastrec partielle pour GIST|GIST", ignore_case = TRUE)) ~ "Gastrectomie atypique (laparo)",
+      
+      # ✅ By pass
+      str_detect(INTERVENTION, regex("By pass|Bypass", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("robot", ignore_case = TRUE)) ~ "Bypass gastrique (robot)",
+      str_detect(INTERVENTION, regex("By pass|Bypass", ignore_case = TRUE)) ~ "Bypass gastrique (laparo)",
+      
+      # ✅ Sleeve
+      str_detect(INTERVENTION, regex("Sleeve", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("robot", ignore_case = TRUE)) ~ "Sleeve gastrectomie (robot)",
+      str_detect(INTERVENTION, regex("Sleeve", ignore_case = TRUE)) ~ "Sleeve gastrectomie (coelio)",
+      
+      # ✅ Gastrotomie
+      str_detect(INTERVENTION, regex("Gastrotomie", ignore_case = TRUE)) ~ "Gastrotomie (laparo)",
+      
+      # ✅ Kinking gastroplastie
+      str_detect(INTERVENTION, regex("Kinking gastroplastie", ignore_case = TRUE)) ~ "Gastroplastie (coelio)",
+      
+      # ✅ Démontage gastroplastie
+      str_detect(INTERVENTION, regex("Démontage gastroplastie", ignore_case = TRUE)) ~ "Démontage gastroplastie (laparo)",
+      
+      TRUE ~ INTERVENTION_GROUPÉE
+    )
+  )
+
+df <- df %>%
+  mutate(
+    INTERVENTION_GROUPÉE = case_when(
+      
+      ## ✅ Colon droit
+      str_detect(INTERVENTION, regex("Colon D|Colectomie D|Colectomie droite", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("robot", ignore_case = TRUE)) ~ "Colon droit (robot)",
+      str_detect(INTERVENTION, regex("Colon D|Colectomie D|Colectomie droite", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("laparo", ignore_case = TRUE)) ~ "Colon droit (laparo)",
+      str_detect(INTERVENTION, regex("Colon D|Colectomie D|Colectomie droite", ignore_case = TRUE)) ~ "Colon droit (coelio)",
+      
+      ## ✅ Hartmann créateur
+      str_detect(INTERVENTION, regex("\\bHartmann\\b", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("robot", ignore_case = TRUE)) ~ "Hartmann (robot)",
+      str_detect(INTERVENTION, regex("\\bHartmann\\b", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("laparo", ignore_case = TRUE)) ~ "Hartmann (laparo)",
+      str_detect(INTERVENTION, regex("\\bHartmann\\b", ignore_case = TRUE)) ~ "Hartmann (coelio)",
+      
+      str_detect(INTERVENTION, regex("RIS|ACA|ileo", ignore_case = TRUE)) ~ "Rectum (coelio)",
+      
+      ## ✅ Colon angulaire
+      str_detect(INTERVENTION, regex("angulaire", ignore_case = TRUE)) ~ "Colon angulaire (coelio)",
+      
+      ## ✅ Colon transverse
+      str_detect(INTERVENTION, regex("transverse", ignore_case = TRUE)) ~ "Colon transverse (coelio)",
+      
+      ## ✅ Colon gauche (inclut sigmoidectomie et variantes)
+      str_detect(INTERVENTION, regex("Colon G|Colectomie G|Sigmoidectomie|Sigmoïdectomie", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("robot", ignore_case = TRUE)) ~ "Colon gauche (robot)",
+      str_detect(INTERVENTION, regex("Colon G|Colectomie G|Sigmoidectomie|Sigmoïdectomie", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("laparo", ignore_case = TRUE)) ~ "Colon gauche (laparo)",
+      str_detect(INTERVENTION, regex("Colon G|Colectomie G|Sigmoidectomie|Sigmoïdectomie", ignore_case = TRUE)) ~ "Colon gauche (coelio)",
+      
+      ## ✅ RIC (Résection iléo-caecale)
+      str_detect(INTERVENTION, regex("RIC|ileocaecale|iléo caecale|iléocaecale|Iléocolectomie", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("robot", ignore_case = TRUE)) ~ "RIC (robot)",
+      str_detect(INTERVENTION, regex("RIC|ileocaecale|iléo caecale|iléocaecale|Iléocolectomie", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("laparo", ignore_case = TRUE)) ~ "RIC (laparo)",
+      str_detect(INTERVENTION, regex("RIC|ileocaecale|iléo caecale|iléocaecale|Iléocolectomie", ignore_case = TRUE)) ~ "RIC (coelio)",
+      
+      ## ✅ Colon total / subtotal (Totalisation)
+      str_detect(INTERVENTION, regex("totalisation|Colon sub total|Colon total|Colectomie totale", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("robot", ignore_case = TRUE)) ~ "Colon total (robot)",
+      str_detect(INTERVENTION, regex("totalisation|Colon sub total|Colon total|Colectomie totale", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("laparo", ignore_case = TRUE)) ~ "Colon total (laparo)",
+      str_detect(INTERVENTION, regex("totalisation|Colon sub total|Colon total|Colectomie totale", ignore_case = TRUE)) ~ "Colon total (coelio)",
+      
+      ## ✅ Rectum (proctectomie, RRS, pelvectomie)
+      str_detect(INTERVENTION, regex("RRS|proctectomie|Pelvectomie", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("robot", ignore_case = TRUE)) ~ "Rectum (robot)",
+      str_detect(INTERVENTION, regex("RRS|proctectomie|Pelvectomie", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("laparo", ignore_case = TRUE)) ~ "Rectum (laparo)",
+      str_detect(INTERVENTION, regex("RRS|proctectomie|Pelvectomie", ignore_case = TRUE)) ~ "Rectum (coelio)",
+      
+      ## ✅ Rétablissement de Hartmann
+      str_detect(INTERVENTION, regex("retabl", ignore_case = TRUE)) ~ "Rétablissement Hartmann|rétablissimenet de hartman",
+      
+      ## ✅ Colostomies (coelio par défaut sauf mention)
+      str_detect(INTERVENTION, regex("Colostomie|Colosotomie", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("laparo", ignore_case = TRUE)) ~ "Colostomie (laparo)",
+      str_detect(INTERVENTION, regex("Colostomie|Colosotomie", ignore_case = TRUE)) ~ "Colostomie (coelio)",
+      
+      ## ✅ Colon droit
+      str_detect(INTERVENTION, regex("colectomie droite|colon D|côlon droit|colectomie aguche", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("robot", ignore_case = TRUE)) ~ "Colon droit (robot)",
+      str_detect(INTERVENTION, regex("colectomie droite|colon D|côlon droit|colectomie aguche", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("laparo", ignore_case = TRUE)) ~ "Colon droit (laparo)",
+      str_detect(INTERVENTION, regex("colectomie droite|colon D|côlon droit|colectomie aguche", ignore_case = TRUE)) ~ "Colon droit (coelio)",
+      
+      ## ✅ Colon angulaire (rare mais ok)
+      str_detect(INTERVENTION, regex("colectomie angulaire", ignore_case = TRUE)) ~ "Colon angulaire (coelio)",
+      
+      ## ✅ RIC (résection iléo caecale)
+      str_detect(INTERVENTION, regex("RIC|resection il[eé]o[- ]?caecale", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("laparo", ignore_case = TRUE)) ~ "RIC (laparo)",
+      str_detect(INTERVENTION, regex("RIC|resection il[eé]o[- ]?caecale", ignore_case = TRUE)) ~ "RIC (coelio)",
+      
+      ## ✅ Colon gauche / sigmoidectomie
+      str_detect(INTERVENTION, regex("colectomie gauche|colon G|sigmoidectomie|sigmoïdectomie", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("robot", ignore_case = TRUE)) ~ "Colon gauche (robot)",
+      str_detect(INTERVENTION, regex("colectomie gauche|colon G|sigmoidectomie|sigmoïdectomie|colectomie laparo ", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("laparo", ignore_case = TRUE)) ~ "Colon gauche (laparo)",
+      str_detect(INTERVENTION, regex("colectomie gauche|colon G|sigmoidectomie|sigmoïdectomie", ignore_case = TRUE)) ~ "Colon gauche (coelio)",
+      
+      ## ✅ Colectomie totale
+      str_detect(INTERVENTION, regex("colectomie totale|colon sub totalcolon sub total|subtotale|colon sub total", ignore_case = TRUE)) ~ "Colectomie totale",
+      
+      ## ✅ Rétablissement Hartmann
+      str_detect(INTERVENTION, regex("retabl", ignore_case = TRUE)) ~ "Rétablissement Hartmann",
+      
+      ## ✅ Hartmann créateur
+      str_detect(INTERVENTION, regex("\\bHartmann\\b", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("robot", ignore_case = TRUE)) ~ "Hartmann (robot)",
+      str_detect(INTERVENTION, regex("\\bHartmann\\b", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("laparo", ignore_case = TRUE)) ~ "Hartmann (laparo)",
+      str_detect(INTERVENTION, regex("\\bHartmann\\b", ignore_case = TRUE)) ~ "Hartmann (coelio)",
+      
+      ## ✅ Rectum / Proctectomie / Pelvectomie postérieure
+      str_detect(INTERVENTION, regex("rectum|proctectomie|pelvectomie|protectomie|protectomie secondaire", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("robot", ignore_case = TRUE)) ~ "Rectum (robot)",
+      str_detect(INTERVENTION, regex("rectum|proctectomie|pelvectomie", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("laparo", ignore_case = TRUE)) ~ "Rectum (laparo)",
+      str_detect(INTERVENTION, regex("rectum|proctectomie|pelvectomie|resection recto sigmoidienne", ignore_case = TRUE)) ~ "Rectum (coelio)",
+      
+      ## ✅ Colostomie
+      str_detect(INTERVENTION, regex("colostomie", ignore_case = TRUE)) &
+        str_detect(INTERVENTION, regex("laparo", ignore_case = TRUE)) ~ "Colostomie (laparo)",
+      str_detect(INTERVENTION, regex("colostomie|coleostomie coelio", ignore_case = TRUE)) ~ "Colostomie (coelio)",
+      # Protectomie secondaire = rectum (proctectomie dérivée)
+      str_detect(INTERVENTION, regex("protectomie secondaire", ignore_case = TRUE)) ~ "Rectum (coelio)",
+      
+      # Protectomie secondaire = rectum (proctectomie dérivée)
+      str_detect(INTERVENTION, regex("protectomie secondaire", ignore_case = TRUE)) ~ "Rectum (coelio)",
+      
+      # Rétablissement Hartmann : orthographes multiples corrigées
+      str_detect(INTERVENTION, regex("rétablissimenet de hartman|retablissiment de hartman|rétablissement hartmann|retablissement hartmann", ignore_case = TRUE)) ~ "Rétablissement Hartmann",
+      
+      # Rétablissement Hartmann : orthographes multiples corrigées
+      str_detect(INTERVENTION, regex("rétablissimenet de hartman|retablissiment de hartman|rétablissement hartmann|retablissement hartmann", ignore_case = TRUE)) ~ "Rétablissement Hartmann",
+      
+      # Colectomie + vessie (coelio)
+      str_detect(INTERVENTION, regex("colectomie.*vessie", ignore_case = TRUE)) ~ "Colectomie + vessie (coelio)",
+      
+      # Colectomie laparo (général)
+      str_detect(INTERVENTION, regex("colectomie.*laparo", ignore_case = TRUE)) ~ "Colectomie (laparo)",
+      
+      ## ✅ Par défaut inchangé
+      TRUE ~ INTERVENTION_GROUPÉE
+    )
+  )
+
+df <- df %>%
+  mutate(
+    INTERVENTION_GROUPÉE = case_when(
+      
+      # Surrénale droite robot
+      str_detect(INTERVENTION, regex("surrénalectomie.*droit.*robot|surrénale droite robot|surrénalectomie D robot", ignore_case = TRUE)) ~ "Surrénalectomie droite (robot)",
+      
+      # Surrénale gauche robot
+      str_detect(INTERVENTION, regex("surrénalectomie.*gauche.*robot|surrénale gauche robot|surrénalectomie G robot", ignore_case = TRUE)) ~ "Surrénalectomie gauche (robot)",
+      
+      # Surrénale droite laparo
+      str_detect(INTERVENTION, regex("surrénalectomie.*droit.*laparo|surrénale droite laparo|surrénalectomie D laparo", ignore_case = TRUE)) ~ "Surrénalectomie droite (laparo)",
+      
+      # Surrénale gauche laparo
+      str_detect(INTERVENTION, regex("surrénalectomie.*gauche.*laparo|surrénale gauche laparo|surrénalectomie G laparo", ignore_case = TRUE)) ~ "Surrénalectomie gauche (laparo)",
+      
+      # Surrénale droite laparotomie
+      str_detect(INTERVENTION, regex("surrénalectomie.*droit.*laparotomie|surrénale droite laparotomie|surrénalectomie D laparotomie", ignore_case = TRUE)) ~ "Surrénalectomie droite (laparotomie)",
+      
+      # Surrénale gauche laparotomie
+      str_detect(INTERVENTION, regex("surrénalectomie.*gauche.*laparotomie|surrénale gauche laparotomie|surrénalectomie G laparotomie", ignore_case = TRUE)) ~ "Surrénalectomie gauche (laparotomie)",
+      
+      # Surrénale droite coelio (par défaut)
+      str_detect(INTERVENTION, regex("surrénalectomie.*droit|surrénale droite|surrénalectomie D", ignore_case = TRUE)) ~ "Surrénalectomie droite (coelio)",
+      
+      # Surrénale gauche coelio (par défaut)
+      str_detect(INTERVENTION, regex("surrénalectomie.*gauche|surrénale gauche|surrénalectomie G", ignore_case = TRUE)) ~ "Surrénalectomie gauche (coelio)",
+      
+      # Surrénalectomie robot (non précisé côté)
+      str_detect(INTERVENTION, regex("surrénalectomie.*robot|surrénale robot", ignore_case = TRUE)) ~ "Surrénalectomie (robot)",
+      
+      # Surrénalectomie laparo (non précisé côté)
+      str_detect(INTERVENTION, regex("surrénalectomie.*laparo", ignore_case = TRUE)) ~ "Surrénalectomie (laparo)",
+      
+      # Surrénalectomie laparotomie (non précisé côté)
+      str_detect(INTERVENTION, regex("surrénalectomie.*laparotomie", ignore_case = TRUE)) ~ "Surrénalectomie (laparotomie)",
+      
+      # Surrénale coelio (non précisé côté, par défaut)
+      str_detect(INTERVENTION, regex("surrénale|surrénalectomie", ignore_case = TRUE)) ~ "Surrénalectomie (coelio)",
+      
+      # Cas spécifiques (reprise, urgence coelio blanche)
+      str_detect(INTERVENTION, regex("reprise.*surrénalectomie|urgence.*coelio blanche", ignore_case = TRUE)) ~ "Reprise surrénalectomie",
+      
+      # Surrénale droite robot
+      str_detect(INTERVENTION, regex("surrenalectomie.*droit.*robot|surrenalectomie D robot|surrenale droite robot|surrenalectomie droite robot", ignore_case = TRUE)) ~ "Surrénalectomie droite (robot)",
+      
+      # Surrénale gauche robot
+      str_detect(INTERVENTION, regex("surrenalectomie.*gauche.*robot|surrenalectomie G robot|surrenale gauche robot|surrenalectomie gauche robot", ignore_case = TRUE)) ~ "Surrénalectomie gauche (robot)",
+      
+      # Surrénale droite laparo
+      str_detect(INTERVENTION, regex("surrenalectomie.*droit.*laparo|surrenalectomie D laparo|surrenale droite laparo|surrenalectomie droite laparo", ignore_case = TRUE)) ~ "Surrénalectomie droite (laparo)",
+      
+      # Surrénale gauche laparo
+      str_detect(INTERVENTION, regex("surrenalectomie.*gauche.*laparo|surrenalectomie G laparo|surrenale gauche laparo|surrenalectomie gauche laparo", ignore_case = TRUE)) ~ "Surrénalectomie gauche (laparo)",
+      
+      # Surrénale droite laparotomie
+      str_detect(INTERVENTION, regex("surrenalectomie.*droit.*laparotomie|surrenalectomie D laparotomie|surrenale droite laparotomie|surrenalectomie droite laparotomie", ignore_case = TRUE)) ~ "Surrénalectomie droite (laparotomie)",
+      
+      # Surrénale gauche laparotomie
+      str_detect(INTERVENTION, regex("surrenalectomie.*gauche.*laparotomie|surrenalectomie G laparotomie|surrenale gauche laparotomie|surrenalectomie gauche laparotomie", ignore_case = TRUE)) ~ "Surrénalectomie gauche (laparotomie)",
+      
+      # Surrénale droite coelio par défaut
+      str_detect(INTERVENTION, regex("surrenalectomie.*droit|surrenalectomie D|surrenale droite|surrenalectomie droite", ignore_case = TRUE)) ~ "Surrénalectomie droite (coelio)",
+      
+      # Surrénale gauche coelio par défaut
+      str_detect(INTERVENTION, regex("surrenalectomie.*gauche|surrenalectomie G|surrenale gauche|surrenalectomie gauche", ignore_case = TRUE)) ~ "Surrénalectomie gauche (coelio)",
+      
+      # Surrénalectomie robot non côté précisé
+      str_detect(INTERVENTION, regex("surrenalectomie.*robot|surrenale robot", ignore_case = TRUE)) ~ "Surrénalectomie (robot)",
+      
+      # Surrénalectomie laparo non côté précisé
+      str_detect(INTERVENTION, regex("surrenalectomie.*laparo", ignore_case = TRUE)) ~ "Surrénalectomie (laparo)",
+      
+      # Surrénalectomie laparotomie non côté précisé
+      str_detect(INTERVENTION, regex("surrenalectomie.*laparotomie", ignore_case = TRUE)) ~ "Surrénalectomie (laparotomie)",
+      
+      # Surrénalectomie coelio non côté précisé (par défaut)
+      str_detect(INTERVENTION, regex("surrenale|surrenalectomie", ignore_case = TRUE)) ~ "Surrénalectomie (coelio)",
+      
+      # Cas reprise ou urgences spécifiques surrénales
+      str_detect(INTERVENTION, regex("reprise.*surrenalectomie|urgence.*coelio blanche", ignore_case = TRUE)) ~ "Reprise surrénalectomie",
+      
+      TRUE ~ INTERVENTION_GROUPÉE
+    )
+  )
+
+#Code PROCTO
+df <- df %>%
+  mutate(
+    INTERVENTION_GROUPÉE = case_when(
+      
+      # Examen anal sous anesthésie générale (AG)
+      str_detect(INTERVENTION, regex("examen anal sous ag", ignore_case = TRUE)) ~ "Abcès de marge / fistule anale",
+      
+      # Examen anal simple (sans précision AG)
+      str_detect(INTERVENTION, regex("^examen anal$", ignore_case = TRUE)) ~ "Abcès de marge / fistule anale",
+      
+      # Examen anal + interventions associées (lambeau, pose séton, dilatation, encollage, extraction corps étranger intra rectal)
+      str_detect(INTERVENTION, regex("examen anal \\+ lambeau|examen anal \\+ laparo|examen anal \\+ pose endosponge|examen anal - dilatation|examen anal : avancement séton|examen anal sous ag, pose séton|examen anal sous ag: encollage fistule|examen anal sous ag: fistule acr|extraction ce intra rectal|extraction corps étranger intra rectal", ignore_case = TRUE)) ~ "Abcès de marge / fistule anale",
+      
+      # Abcès de marge anale (et variantes orthographiques)
+      str_detect(INTERVENTION, regex("abcès marge anale|abces marge anale|abcès de marge|abces de marge|abcès marge \\+", ignore_case = TRUE)) ~ "Abcès de marge / fistule anale",
+      
+      # Abcès péri-anal / fessier (hors marge anale)
+      str_detect(INTERVENTION, regex("abces peri anale|abcès périnéal|abcès périnéal|abcès périnéal|abcès fesse|abces fesse|Abcès de fesse|abcès fesse", ignore_case = TRUE)) ~ "Abcès de marge / fistule anale",
+      
+      # Drainage de masse anale
+      str_detect(INTERVENTION, regex("drainage ma|drainage masse anale", ignore_case = TRUE)) ~ "Abcès de marge / fistule anale",
+      
+      # Examen procto simple
+      str_detect(INTERVENTION, regex("^examen procto$", ignore_case = TRUE)) ~ "Abcès de marge / fistule anale",
+      
+      # Fistule anale (sans fistule anastomose oesogastrique / aorto-duodénale)
+      str_detect(INTERVENTION, regex("fistule anale|fistule anus|fisutle anale", ignore_case = TRUE)) ~ "Abcès de marge / fistule anale",
+      
+      # Hémorroïdes classiques et Milligan Morgan
+      str_detect(INTERVENTION, regex("hémorroïdes|hemorroide|milligan morgan", ignore_case = TRUE)) ~ "Hémorroïdes",
+      
+      # Recoupe Baulieu, Babcock, Beaulieux et variantes orthographiques
+      str_detect(INTERVENTION, regex("recoupe baulieu|babcock|babcok|beaulieux", ignore_case = TRUE)) ~ "Recoupe Baulieu / Babcok",
+      
+      # Abaissement fistule anale (geste spécifique)
+      str_detect(INTERVENTION, regex("abaissement fistule anale", ignore_case = TRUE)) ~ "Abaissement fistule anale",
+      
+      # Exclure fistule anastomose oesogastrique et fistule aorto-duodénale de la proctologie
+      str_detect(INTERVENTION, regex("fistule anastomose oesogastrique|fistule aorto-duodénale", ignore_case = TRUE)) ~ INTERVENTION_GROUPÉE,
+      
+      # Examen anal sous anesthésie générale (AG)
+      str_detect(INTERVENTION, regex("examen anal sous ag", ignore_case = TRUE)) ~ "Abcès de marge / fistule anale",
+      
+      # Examen anal simple (sans précision AG)
+      str_detect(INTERVENTION, regex("^examen anal$", ignore_case = TRUE)) ~ "Abcès de marge / fistule anale",
+      
+      # Examen anal + interventions associées (lambeau, pose séton, dilatation, encollage, extraction corps étranger intra rectal)
+      str_detect(INTERVENTION, regex("examen anal \\+ lambeau|examen anal \\+ laparo|examen anal \\+ pose endosponge|examen anal - dilatation|examen anal : avancement séton|examen anal sous ag, pose séton|examen anal sous ag: encollage fistule|examen anal sous ag: fistule acr|extraction corps étranger|extraction ce intra rectal", ignore_case = TRUE)) ~ "Abcès de marge / fistule anale",
+      
+      # Abcès de marge anale (et variantes orthographiques)
+      str_detect(INTERVENTION, regex("abcès marge anale|abces marge anale|abcès de marge|abces de marge|abcès marge \\+|abcès de MA|abces MA|abcès MA \\+ séton", ignore_case = TRUE)) ~ "Abcès de marge / fistule anale",
+      
+      # Abcès péri-anal / fessier (hors marge anale)
+      str_detect(INTERVENTION, regex("abces peri anale|abcès périnéal|abcès périnéal|abcès périnéal|abcès fesse|abces fesse|Abcès de fesse|abcès fesse", ignore_case = TRUE)) ~ "Abcès de marge / fistule anale",
+      
+      # Drainage de masse anale
+      str_detect(INTERVENTION, regex("drainage ma|drainage masse anale", ignore_case = TRUE)) ~ "Abcès de marge / fistule anale",
+      
+      # Fissure anale et fissurectomie
+      str_detect(INTERVENTION, regex("fissure anale|fissurectomie", ignore_case = TRUE)) ~ "Fissure anale",
+      
+      # Examen procto simple
+      str_detect(INTERVENTION, regex("^examen procto$", ignore_case = TRUE)) ~ "Abcès de marge / fistule anale",
+      
+      # Fistule anale (sans fistule anastomose oesogastrique / aorto-duodénale)
+      str_detect(INTERVENTION, regex("fistule anale|fistule anus|fisutle anale", ignore_case = TRUE)) ~ "Abcès de marge / fistule anale",
+      
+      # Hémorroïdes classiques et Milligan Morgan
+      str_detect(INTERVENTION, regex("hémorroïdes|hemorroide|milligan morgan", ignore_case = TRUE)) ~ "Hémorroïdes",
+      
+      # Recoupe Baulieu, Babcock, Beaulieux et variantes orthographiques
+      str_detect(INTERVENTION, regex("recoupe baulieu|babcock|babcok|beaulieux", ignore_case = TRUE)) ~ "Recoupe Baulieu / Babcok",
+      
+      # Abaissement fistule anale (geste spécifique)
+      str_detect(INTERVENTION, regex("abaissement fistule anale", ignore_case = TRUE)) ~ "Abaissement fistule anale",
+      
+      # Exclure fistule anastomose oesogastrique et fistule aorto-duodénale de la proctologie
+      str_detect(INTERVENTION, regex("fistule anastomose oesogastrique|fistule aorto-duodénale", ignore_case = TRUE)) ~ INTERVENTION_GROUPÉE,
+      
+      # Par défaut, garder la catégorie déjà existante
       TRUE ~ INTERVENTION_GROUPÉE
     )
   )
 
 
 
-table(df$INTERVENTION_GROUPÉE)
+
+
+
+
+
+
 
 df %>%
-  filter(INTERVENTION_GROUPÉE == "Autre") %>%
-  count(INTERVENTION, sort = TRUE)
-
-
-df %>%
-  filter(INTERVENTION_GROUPÉE == "Autre") %>%
+  filter(is.na(INTERVENTION_GROUPÉE)) %>%
   count(INTERVENTION, sort = TRUE) %>%
   print(n = Inf)
+
 
 
 
@@ -3269,6 +3310,39 @@ df_top2col <- tibble(
 
 df_top2col %>%
   gt()
+
+
+
+
+library(dplyr)
+
+# Filtre pour chaque groupe
+df_geste_tx <- df %>%
+  filter(
+    INTERVENTION_GROUPÉE %in% c("Transplantation hépatique", "Transplantation pancréatique", "Prélèvement hépatique", "Prélèvement pancréatique")
+  ) %>%
+  group_by(INTERVENTION_GROUPÉE) %>%
+  summarise(
+    n = n(),
+    gestes = sum(Geste == "Yes", na.rm = TRUE),
+    taux_geste = round(100 * gestes / n, 1)
+  )
+
+print(df_geste_tx)
+
+# Pour les types de geste majoritaires
+df_geste_type <- df %>%
+  filter(
+    INTERVENTION_GROUPÉE %in% c("Transplantation hépatique", "Transplantation pancréatique", "Prélèvement hépatique", "Prélèvement pancréatique"),
+    !is.na(QUEL_GESTE_0No_1paroi_2dissection_3anastomose_4Tout)
+  ) %>%
+  group_by(INTERVENTION_GROUPÉE, QUEL_GESTE_0No_1paroi_2dissection_3anastomose_4Tout) %>%
+  summarise(
+    n = n()
+  ) %>%
+  arrange(INTERVENTION_GROUPÉE, desc(n))
+
+print(df_geste_type)
 
 
 
