@@ -401,6 +401,40 @@ tbl_garde_programme
 
 
 
+library(ggplot2)
+library(dplyr)
+
+# Vérifie les valeurs uniques pour être sûr
+unique(df$AMBIANCE)
+
+# Crée la table de répartition
+df_ambiance <- df %>%
+  filter(!is.na(AMBIANCE)) %>%
+  count(AMBIANCE) %>%
+  mutate(
+    pourcent = n / sum(n),
+    label = paste0(n, " (", round(100 * pourcent, 1), "%)")
+  )
+
+# Couleurs perso si tu veux
+couleurs_ambiance <- c(
+  "1 - je veux partir" = "#F4A3A3",
+  "2 - c'est ok" = "#A3C4F4",
+  "3 - on recommence" = "#A3F4A3"
+)
+
+# Bar plot
+ggplot(df_ambiance, aes(x = AMBIANCE, y = n, fill = AMBIANCE)) +
+  geom_bar(stat = "identity", width = 0.6) +
+  geom_text(aes(label = label),
+            vjust = -0.5, size = 5) +
+  scale_fill_manual(values = couleurs_ambiance) +
+  labs(
+    x = "Expérience ressentie",
+    y = "Nombre d’interventions"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "none")
 
 
 
@@ -923,6 +957,82 @@ ggplot(df_ressenti, aes(x = Si_pas_de_geste_RESSENTI, y = n, fill = Si_pas_de_ge
   theme(legend.position = "none")
 
 
+library(dplyr)
+
+n_ressenti_pas_de_geste <- df %>%
+  filter(
+    Geste == "No",
+    !is.na(Si_pas_de_geste_RESSENTI)
+  ) %>%
+  nrow()
+
+n_ressenti_pas_de_geste
+
+library(dplyr)
+
+df %>%
+  filter(
+    Geste == "No",
+    !is.na(Si_pas_de_geste_RESSENTI)
+  ) %>%
+  count(Si_pas_de_geste_RESSENTI) %>%
+  mutate(
+    pourcentage = round(100 * n / sum(n), 1)
+  )
+
+
+
+library(dplyr)
+library(gt)
+
+# Étape 1 : Résumé filtré avec exclusions
+df_ressenti_interv <- df %>%
+  filter(
+    !is.na(Si_pas_de_geste_RESSENTI),
+    Si_pas_de_geste_RESSENTI %in% c("Je ne suis pas prêt pour le faire", "J'aurais aimé essayer"),
+    Geste != "Yes",
+    !INTERVENTION_GROUPÉE %in% c("Autre", "Laparotomie exploratrice", "Reprise chirurgicale", "Exploration des 4 sites", "Thyroïdectomie totale")
+  ) %>%
+  group_by(INTERVENTION_GROUPÉE) %>%
+  mutate(total_n = n()) %>%
+  group_by(INTERVENTION_GROUPÉE, Si_pas_de_geste_RESSENTI) %>%
+  summarise(
+    n_modalite = n(),
+    total_all = first(total_n),
+    pct = 100 * n_modalite / total_all,
+    .groups = "drop"
+  ) %>%
+  filter(total_all >= 10) %>%
+  arrange(Si_pas_de_geste_RESSENTI, desc(pct))
+
+# Étape 2 : Top 5 par ressenti, trié par % décroissant
+top_je_suis_pas_pret <- df_ressenti_interv %>%
+  filter(Si_pas_de_geste_RESSENTI == "Je ne suis pas prêt pour le faire") %>%
+  slice_max(order_by = pct, n = 5, with_ties = FALSE) %>%
+  mutate(Label = paste0(
+    INTERVENTION_GROUPÉE, " (", n_modalite, "/", total_all, ", ", round(pct, 1), "%)"
+  )) %>%
+  pull(Label)
+
+top_aimerait_essayer <- df_ressenti_interv %>%
+  filter(Si_pas_de_geste_RESSENTI == "J'aurais aimé essayer") %>%
+  slice_max(order_by = pct, n = 5, with_ties = FALSE) %>%
+  mutate(Label = paste0(
+    INTERVENTION_GROUPÉE, " (", n_modalite, "/", total_all, ", ", round(pct, 1), "%)"
+  )) %>%
+  pull(Label)
+
+# Étape 3 : Affichage en 2 colonnes net
+df_top2col_ressenti <- tibble(
+  `Je ne suis pas prêt pour le faire` = top_je_suis_pas_pret,
+  `J'aurais aimé essayer` = top_aimerait_essayer
+)
+
+df_top2col_ressenti %>%
+  gt()
+
+
+
 
 
 library(dplyr)
@@ -940,7 +1050,7 @@ df_a_l_aise <- df %>%
 
 table(df$Geste_a_l_aise)
 
- 
+
 df %>%
   filter(!is.na(Geste_a_l_aise)) %>%
   select(Geste_a_l_aise) %>%
@@ -968,6 +1078,65 @@ ggplot(df_a_l_aise, aes(x = Geste_a_l_aise, y = n, fill = Geste_a_l_aise)) +
   ) +
   theme_minimal(base_size = 14) +
   theme(legend.position = "none")
+
+
+
+
+library(dplyr)
+library(gt)
+library(tidyr)
+
+# Résumé robuste avec exclusions et geste_majoritaire sûr
+df_resume_a_l_aise <- df %>%
+  filter(
+    !is.na(Geste_a_l_aise),
+    !is.na(INTERVENTION_GROUPÉE),
+    !INTERVENTION_GROUPÉE %in% c("Laparotomie exploratrice", "Reprise chirurgicale")
+  ) %>%
+  group_by(Geste_a_l_aise, INTERVENTION_GROUPÉE) %>%
+  summarise(
+    total_interventions = n(),
+    gestes_realises = sum(Geste == "Yes", na.rm = TRUE),
+    geste_majoritaire = {
+      tg <- table(QUEL_GESTE_0No_1paroi_2dissection_3anastomose_4Tout)
+      if (length(tg) == 0) NA_character_ else names(sort(tg, decreasing = TRUE))[1]
+    },
+    .groups = "drop"
+  ) %>%
+  distinct(Geste_a_l_aise, INTERVENTION_GROUPÉE, .keep_all = TRUE) %>%
+  arrange(Geste_a_l_aise, desc(gestes_realises))
+
+# Top 3 par catégorie
+df_top3_a_l_aise <- df_resume_a_l_aise %>%
+  group_by(Geste_a_l_aise) %>%
+  slice_max(gestes_realises, n = 3) %>%
+  mutate(
+    Label = paste0(
+      INTERVENTION_GROUPÉE, " (",
+      gestes_realises, " / ", total_interventions, ")",
+      ifelse(!is.na(geste_majoritaire), paste0(" - ", geste_majoritaire), "")
+    )
+  ) %>%
+  ungroup()
+
+# Reformater en colonnes
+df_top_wide <- df_top3_a_l_aise %>%
+  group_by(Geste_a_l_aise) %>%
+  mutate(Rang = row_number()) %>%
+  select(Geste_a_l_aise, Rang, Label) %>%
+  pivot_wider(names_from = Geste_a_l_aise, values_from = Label) %>%
+  arrange(Rang) %>%
+  select(-Rang)
+
+# Affichage
+df_top_wide %>%
+  gt()
+
+
+
+
+
+
 
 
 internes <- df %>%
@@ -1653,6 +1822,138 @@ df %>%
   theme_minimal() +
   theme(legend.position = "none")
 
+library(dplyr)
+
+
+unique(df$RANG_BOSS)
+
+
+library(dplyr)
+library(gtsummary)
+library(broom)
+
+# 1️⃣ Variable binaire : pédagogie élevée
+df <- df %>%
+  mutate(
+    PEDAGOGIE_ELEVEE = ifelse(PEDAGOGIE %in% c("4-bien", "5-incroyable!!"), 1, 0)
+  )
+
+# 2️⃣ Regroupe ancienneté interne
+df <- df %>%
+  mutate(
+    INTERNE_SENIORITE = case_when(
+      annee_DES %in% c(1, 2) ~ "1ère et 2e année",
+      annee_DES %in% c(3, 4) ~ "3e et 4e année",
+      TRUE ~ NA_character_
+    )
+  )
+
+# 3️⃣ Statut opérateur basé sur RANG_BOSS
+df <- df %>%
+  mutate(
+    OPERATEUR_STATUT = case_when(
+      RANG_BOSS %in% c("PH", "MCU", "PU") ~ "Senior",
+      RANG_BOSS %in% c("CCA", "DJ") ~ "Junior",
+      TRUE ~ "Autre"
+    )
+  )
+
+# 4️⃣ Variables pour le modèle
+df <- df %>%
+  mutate(
+    Garde_Programme = factor(Garde_Programme),
+    Geste_YN = ifelse(Geste == "Yes", "Oui", "Non")
+  )
+
+# 5️⃣ Filtre pour retirer les Autre et NA
+df_modele <- df %>%
+  filter(
+    OPERATEUR_STATUT %in% c("Senior", "Junior"),
+    !is.na(INTERNE_SENIORITE)
+  )
+
+# 6️⃣ Modèle logistique final
+modele <- glm(
+  PEDAGOGIE_ELEVEE ~ INTERNE_SENIORITE + OPERATEUR_STATUT + Garde_Programme + Geste_YN,
+  data = df_modele,
+  family = binomial()
+)
+
+# 7️⃣ Tableau résultat
+tbl <- tbl_regression(
+  modele,
+  exponentiate = TRUE,
+  label = list(
+    INTERNE_SENIORITE ~ "Ancienneté interne",
+    OPERATEUR_STATUT ~ "Statut opérateur",
+    Garde_Programme ~ "Type de programme",
+    Geste_YN ~ "Geste réalisé"
+  )
+) %>%
+  bold_labels() %>%
+  add_global_p()
+
+tbl
+
+library(broom)
+library(forestplot)
+
+# Fonction pour préparer les données au format forestplot
+prep_forest_data <- function(model, var_labels) {
+  tidy(model, exponentiate = TRUE, conf.int = TRUE) %>%
+    filter(term != "(Intercept)") %>%
+    mutate(
+      label = recode(term, !!!var_labels),
+      label = ifelse(is.na(label), term, label)
+    ) %>%
+    select(label, estimate, conf.low, conf.high) %>%
+    mutate(
+      OR = sprintf("%.2f", estimate),
+      IC = paste0("[", sprintf("%.2f", conf.low), "; ", sprintf("%.2f", conf.high), "]")
+    )
+}
+
+# Libellés pour chaque modalité
+labels_pedago <- c(
+  "INTERNE_SENIORITE3e et 4e année" = "3e & 4e année vs 1-2",
+  "OPERATEUR_STATUTJunior" = "Junior vs Senior",
+  "Garde_ProgrammeProgrammé" = "Programmé vs Garde",
+  "Geste_YNOui" = "Geste réalisé Oui vs Non"
+)
+
+# Préparer les données
+df_fp <- prep_forest_data(modele, labels_pedago)
+
+# Créer la table texte
+tabletext <- cbind(
+  Variable = df_fp$label,
+  OR = df_fp$OR,
+  `IC 95%` = df_fp$IC
+)
+
+# Afficher le forestplot
+forestplot(
+  labeltext = tabletext,
+  mean = df_fp$estimate,
+  lower = df_fp$conf.low,
+  upper = df_fp$conf.high,
+  zero = 1,
+  xlog = TRUE,
+  title = "Modèle : Facteurs associés à une pédagogie perçue élevée",
+  xlab = "<--- Moins probable           Plus probable --->",
+  ci.vertices = TRUE,
+  ci.vertices.height = 0.2,
+  boxsize = 0.2,
+  lwd.ci = 2,
+  col = fpColors(box = "black", lines = "black", zero = "grey50")
+)
+
+
+
+
+
+
+
 
 # Tableau de répartition
 df %>%
@@ -1682,7 +1983,7 @@ df %>%
   geom_text(aes(label = paste0(n, " (", round(100 * pourcent, 1), "%)")),
             vjust = -0.5, size = 4.5) +
   scale_fill_manual(values = couleurs_self) +
-  labs(title = "Répartition de la self-estime en sortie de bloc",
+  labs(title = "Répartition de la self-esteem en sortie de bloc",
        x = "Self-estime",
        y = "Nombre d’observations") +
   theme_minimal() +
@@ -1752,8 +2053,8 @@ ggplot(df_taux, aes(x = SELF_ESTIME_SORTIE, y = taux_yes, group = 1)) +
   scale_y_continuous(labels = scales::percent_format(), limits = c(0, 1)) +
   scale_fill_manual(values = fill_pastel) +
   labs(
-    title = "Taux de gestes réalisés selon la self-estime de sortie",
-    x = "Self-estime de sortie",
+    title = "Taux de gestes réalisés selon la self-esteem de sortie",
+    x = "Self-esteem de sortie",
     y = "Taux de gestes réalisés"
   ) +
   theme_minimal(base_size = 13) +
@@ -2662,6 +2963,7 @@ df <- df %>%
   )
 
 
+
 table(df$INTERVENTION_GROUPÉE)
 
 df %>%
@@ -2673,6 +2975,306 @@ df %>%
   filter(INTERVENTION_GROUPÉE == "Autre") %>%
   count(INTERVENTION, sort = TRUE) %>%
   print(n = Inf)
+
+
+
+
+
+
+
+library(dplyr)
+library(stringr)
+
+df <- df %>%
+  mutate(
+    ABORD = case_when(
+      str_detect(INTERVENTION_GROUPÉE, regex("\\(coelio\\)", TRUE)) ~ "Coelioscopie",
+      str_detect(INTERVENTION_GROUPÉE, regex("\\(laparo\\)", TRUE)) ~ "Laparotomie",
+      str_detect(INTERVENTION_GROUPÉE, regex("\\(robot\\)", TRUE)) ~ "Robot",
+      str_detect(INTERVENTION_GROUPÉE, regex("\\(open\\)", TRUE)) ~ "Open",
+      TRUE ~ "Non précisé"
+    )
+  )
+
+
+
+library(dplyr)
+
+df <- df %>%
+  mutate(
+    ABORD = case_when(
+      # Coelioscopie
+      str_detect(INTERVENTION_GROUPÉE, regex("\\(coelio\\)", TRUE)) ~ "Coelioscopie",
+      INTERVENTION_GROUPÉE %in% c(
+        "Appendicectomie coelio", "Bypass gastrique (coelio)", "Sleeve gastrectomie (coelio)",
+        "Donneur vivant (coelio)", "Rectopexie (coelio)", "Cure d’éventration (coelio)",
+        "SPG (coelio)", "Splénectomie (coelio)", "Hartmann (coelio)", "Rectum (coelio)",
+        "Colectomie droite (coelio)", "Résection iléo-caecale (coelio)", "Colectomie subtotale (coelio)",
+        "Colectomie (coelio)", "Cure hernie inguinale coelio", "Cure hernie inguinale (coelio)"
+      ) ~ "Coelioscopie",
+      
+      # Ouvert
+      str_detect(INTERVENTION_GROUPÉE, regex("\\(laparo\\)", TRUE)) ~ "Ouvert",
+      INTERVENTION_GROUPÉE %in% c(
+        "Laparotomie exploratrice", "Hartmann (laparo)", "Rectum (laparo)",
+        "Résection iléo-caecale (laparo)", "SPG (laparo)", "Pancréatectomie gauche (laparo)",
+        "Pancréatectomie céphalique (laparo)", "Cure d’éventration (laparo)",
+        "Splénectomie (laparo)", "Colectomie gauche (laparo)", "Colectomie (laparo)",
+        "Hépatectomie majeure (laparo)", "Hépatectomie mineure (laparo)",
+        "Annexectomie laparotomie"
+      ) ~ "Ouvert",
+      
+      # Robot
+      str_detect(INTERVENTION_GROUPÉE, regex("\\(robot\\)", TRUE)) ~ "Robot",
+      INTERVENTION_GROUPÉE %in% c(
+        "Pancréatectomie céphalique (robot)", "Myotomie de Heller / diverticulectomie (robot)",
+        "Rectum (robot)", "SPG (robot)", "Hépatectomie mineure (robot)",
+        "Hépatectomie majeure (robot)", "Surrénalectomie (robot)", "Bypass gastrique (robot)",
+        "Colectomie (robot)"
+      ) ~ "Robot",
+      
+      # Proctologie
+      INTERVENTION_GROUPÉE %in% c(
+        "TEM (chirurgie transanale)", "Examen anal", "Abcès de marge anale",
+        "Exérèse sinus pilonidal", "Fistule digestive"
+      ) ~ "Proctologie",
+      
+      TRUE ~ "Non précisé"
+    )
+  )
+
+df <- df %>%
+  mutate(
+    ABORD = case_when(
+      # Garde les abords déjà codés
+      ABORD != "Non précisé" ~ ABORD,
+      
+      # Cholécystectomie : coelio par défaut
+      INTERVENTION_GROUPÉE == "Cholécystectomie" ~ "Coelioscopie",
+      
+      # Cervicotomie
+      INTERVENTION_GROUPÉE %in% c("Thyroïdectomie totale",
+                                  "Loboisthmectomie thyroïdienne",
+                                  "Exploration des 4 sites") ~ "Cervicotomie",
+      
+      # Coelioscopie
+      INTERVENTION_GROUPÉE %in% c(
+        "Cure hernie hiatale",
+        "Cure hernie inguinale (TEP)",
+        "Occlusion sur bride",
+        "Vaginoplastie",
+        "Ablation anneau gastrique",
+        "Cure hernie pariétale (TAP)",
+        "Reprise bariatrique"
+      ) ~ "Coelioscopie",
+      
+      # Autre (abords techniques hors standard)
+      INTERVENTION_GROUPÉE %in% c(
+        "Pose de TIPS",
+        "Biopsie hépatique",
+        "Embolisation portale",
+        "Autre (non digestif)",
+        "Autre ORL"
+      ) ~ "Autre",
+      
+      # Tout le reste = Ouvert
+      TRUE ~ "Ouvert"
+    )
+  )
+
+
+df %>% filter(ABORD == "Non précisé") %>% count(INTERVENTION_GROUPÉE)
+
+
+# Étape 1 : Résumé du taux de geste par ABORD
+n_total_abord <- sum(df$Geste %in% c("Yes"), na.rm = TRUE)
+
+df_resume_abord <- df %>%
+  filter(!is.na(ABORD), Geste == "Yes") %>%
+  group_by(ABORD) %>%
+  summarise(
+    gestes_realises = n(),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    total = n_total_abord,
+    pourcentage = 100 * gestes_realises / total,
+    label = paste0(gestes_realises, "/", total, " (", round(pourcentage, 1), "%)"),
+    ABORD = factor(ABORD, levels = c("Coelioscopie", "Ouvert", "Robot", "Proctologie", "Cervicotomie", "Autre"))
+  )
+
+df_resume_abord <- df_resume_abord %>%
+  mutate(ABORD = factor(ABORD, levels = rev(levels(ABORD))))
+
+# Étape 2 : Bar plot horizontal batterie pour ABORD
+library(ggplot2)
+
+ggplot(df_resume_abord, aes(x = ABORD)) +
+  geom_col(aes(y = total), fill = "grey85", width = 0.7) +  # fond fixe
+  geom_col(aes(y = gestes_realises, fill = ABORD), width = 0.7, show.legend = FALSE) +
+  geom_text(aes(y = gestes_realises + 5, label = label), hjust = 0, size = 5.5) +
+  coord_flip() +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  labs(
+    title = "Taux de geste par voie d'abord",
+    x = "Voie d'abord",
+    y = "Nombre d’interventions"
+  ) +
+  theme_minimal(base_size = 14)
+
+
+# Étape 1 : Résumé du taux de geste par ABORD (dénominateur spécifique)
+df_resume_abord <- df %>%
+  filter(!is.na(ABORD)) %>%
+  group_by(ABORD) %>%
+  summarise(
+    total_interventions = n(),
+    gestes_realises = sum(Geste == "Yes", na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    pourcentage = 100 * gestes_realises / total_interventions,
+    label = paste0(gestes_realises, "/", total_interventions, " (", round(pourcentage, 1), "%)"),
+    ABORD = factor(ABORD, levels = c("Coelioscopie", "Ouvert", "Robot", "Proctologie", "Cervicotomie", "Autre"))
+  ) %>%
+  mutate(ABORD = factor(ABORD, levels = rev(levels(ABORD))))
+
+# Étape 2 : Bar plot horizontal batterie pour ABORD (dénominateur spécifique)
+ggplot(df_resume_abord, aes(x = ABORD)) +
+  geom_col(aes(y = total_interventions), fill = "grey85", width = 0.7) +  # fond fixe
+  geom_col(aes(y = gestes_realises, fill = ABORD), width = 0.7, show.legend = FALSE) +
+  geom_text(aes(y = gestes_realises + 5, label = label), hjust = 0, size = 5.5) +
+  coord_flip() +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  labs(
+    title = "Taux de geste par voie d'abord",
+    x = "Voie d'abord",
+    y = "Nombre d’interventions"
+  ) +
+  theme_minimal(base_size = 14)
+
+library(gtsummary)
+
+# Filtre uniquement Coelioscopie et Ouvert
+df_abord_test <- df %>%
+  filter(ABORD %in% c("Coelioscopie", "Ouvert")) %>%
+  mutate(
+    Geste_bin = ifelse(Geste == "Yes", "Geste réalisé", "Pas de geste")
+  )
+
+# Tableau de résumé + test de comparaison
+tbl <- df_abord_test %>%
+  select(ABORD, Geste_bin) %>%
+  tbl_summary(
+    by = ABORD,
+    statistic = list(all_categorical() ~ "{n} ({p}%)"),
+    missing = "no"
+  ) %>%
+  add_p(test = all_categorical() ~ "chisq.test") %>%
+  add_overall() %>%
+  modify_header(label ~ "Variable")
+
+tbl
+
+
+
+
+#TOP 3
+
+library(dplyr)
+library(gt)
+
+# Résumé avec n >= 10
+df_resume_intervention <- df %>%
+  filter(!is.na(INTERVENTION_GROUPÉE)) %>%
+  group_by(INTERVENTION_GROUPÉE) %>%
+  summarise(
+    total_interventions = n(),
+    gestes_realises = sum(Geste == "Yes", na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  filter(total_interventions >= 10)
+
+# Top 3 interventions les plus aidées (plus de gestes réalisés)
+top_aidees <- df_resume_intervention %>%
+  arrange(desc(gestes_realises)) %>%
+  slice(1:3) %>%
+  mutate(Label = paste0(INTERVENTION_GROUPÉE, " (", gestes_realises, " / ", total_interventions, ")")) %>%
+  pull(Label)
+
+# Top 3 interventions pour lesquelles il n’y a pas de geste
+top_non_aidees <- df_resume_intervention %>%
+  arrange(gestes_realises) %>%
+  slice(1:3) %>%
+  mutate(Label = paste0(INTERVENTION_GROUPÉE, " (", gestes_realises, " / ", total_interventions, ")")) %>%
+  pull(Label)
+
+# Tableau final 2 colonnes
+df_top2col <- tibble(
+  `Top 3 interventions sur lesquelles les internes sont aidés` = top_aidees,
+  `Top 3 interventions pour lesquelles il n’y a pas de geste` = top_non_aidees
+)
+
+df_top2col %>%
+  gt()
+
+
+
+
+
+
+library(dplyr)
+library(gt)
+
+# Résumé avec n >= 10 + calcul du pourcentage + exclusion Pose de TIPS
+df_resume_intervention <- df %>%
+  filter(!is.na(INTERVENTION_GROUPÉE)) %>%
+  filter(!INTERVENTION_GROUPÉE %in% c("Pose de TIPS", "Autre", "Exérèse sous-cutanée")) %>%
+  group_by(INTERVENTION_GROUPÉE) %>%
+  summarise(
+    total_interventions = n(),
+    gestes_realises = sum(Geste == "Yes", na.rm = TRUE),
+    pct_gestes_realises = 100 * gestes_realises / total_interventions,
+    .groups = "drop"
+  ) %>%
+  filter(total_interventions >= 10)
+
+# Top 5 interventions les plus aidées (plus de % de gestes réalisés)
+top_aidees <- df_resume_intervention %>%
+  arrange(desc(pct_gestes_realises)) %>%
+  slice(1:5) %>%
+  mutate(Label = paste0(
+    INTERVENTION_GROUPÉE, " (",
+    gestes_realises, "/", total_interventions, ", ",
+    round(pct_gestes_realises, 1), "%)"
+  )) %>%
+  pull(Label)
+
+# Top 5 interventions pour lesquelles il n’y a pas de geste (moins de %)
+top_non_aidees <- df_resume_intervention %>%
+  arrange(pct_gestes_realises) %>%
+  slice(1:5) %>%
+  mutate(Label = paste0(
+    INTERVENTION_GROUPÉE, " (",
+    gestes_realises, "/", total_interventions, ", ",
+    round(pct_gestes_realises, 1), "%)"
+  )) %>%
+  pull(Label)
+
+# Tableau final 2 colonnes
+df_top2col <- tibble(
+  `Top 5 interventions sur lesquelles les internes sont aidés` = top_aidees,
+  `Top 5 interventions pour lesquelles il n’y a pas de geste` = top_non_aidees
+)
+
+df_top2col %>%
+  gt()
+
+
+
+
+
+
 
 
 # ---- Packages ----
@@ -2935,4 +3537,3 @@ destination <- file.path("~/Downloads", nom_fichier)
 download.file(url = url_github, destfile = destination, mode = "wb")
 
 cat("✅ Fichier téléchargé dans : ", destination, "\n")
-
