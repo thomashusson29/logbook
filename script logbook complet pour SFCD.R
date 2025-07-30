@@ -3,7 +3,6 @@ if (!require("devtools")) install.packages("devtools")
 #install claudeR avec force = TRUE pour écraser les anciennes versions
 devtools::install_github("IMNMV/ClaudeR", force = TRUE)
 library(ClaudeR)
-claudeAddin()
 
 # Installation des packages nécessaires
 install.packages(c(
@@ -30,7 +29,7 @@ pacman::p_load(
 
 
 ##--------------------------------------------
-##---------GIT PUSH DU SCRIPT-------
+##-------GIT PUSH DU SCRIPT-------
 # Ajouter le fichier au staging Git
 fichier <- "/Users/thomashusson/Documents/R/Logbook/script logbook complet pour SFCD.R"
 setwd("/Users/thomashusson/Documents/R/Logbook")
@@ -540,6 +539,7 @@ tbl_geste_socle <- df %>%
 
 tbl_geste_socle
 
+
 #**------Graphique : Taux de geste socle vs non socle-------**
 # Préparation des données
 df_geste_socle_plot <- df %>%
@@ -912,6 +912,19 @@ print(courbe_par_quinzaine_detaillee)
 
 
 #**régression pour taux de geste en fonction du temps**
+df_semestre_hiver <- df %>%
+  filter(!is.na(Geste), !is.na(DATE)) %>%
+  mutate(DATE = as.Date(DATE)) %>%
+  filter(DATE >= as.Date("2024-11-02") & DATE <= as.Date("2025-04-30")) %>%
+  mutate(Geste_bin = as.numeric(Geste == "Yes"))
+
+cor_spearman <- cor.test(
+  as.numeric(df_semestre_hiver$DATE),
+  df_semestre_hiver$Geste_bin,
+  method = "spearman"
+)
+
+
 modele_logit <- glm(Geste_bin ~ as.numeric(DATE), data = df_semestre_hiver, family = binomial)
 
 OR_par_jour <- tidy(modele_logit, exponentiate = TRUE) %>%
@@ -2883,7 +2896,7 @@ plot_taux_de_geste <- ggplot(df_resume_abord, aes(x = ABORD_NOUVEAU)) +
 
 plot_taux_de_geste
 
-ggsave("plot.svg", plot, width = 10, height = 6, dpi = 300)
+ggsave("taux_de_geste_par_abord.svg", plot = plot_taux_de_geste, width = 10, height = 6, dpi = 300)
 
 # TABLEAU RÉSUMÉ
 df_resume_abord %>%
@@ -4413,3 +4426,37 @@ tableau_final_operateurs
 # - classement_pedagogie : classement par pédagogie  
 # - classement_ambiance : classement par ambiance
 ##--------------------------------------------
+##-------LANCEMENT APPLICATIONS SHINY--------
+# Sauvegarde du dataframe dans les deux applications Shiny
+saveRDS(df, file = "/Users/thomashusson/Documents/R/Logbook/appinternespourcentages/logbook_data.rds")
+saveRDS(df, file = "/Users/thomashusson/Documents/R/Logbook/appcarte/logbook_data.rds")
+saveRDS(df, file = "/Users/thomashusson/Documents/R/Logbook/app1/logbook_data.rds")
+
+saveRDS(df, "logbook_data.rds")
+
+#lancements apps
+# Configuration du compte (à faire une fois)
+rsconnect::setAccountInfo(name='thomas-husson', token='F86928AE3B04B208C12CFF5F5324B05F', secret='E9teWbmpEpRdaNFdP5gJYZKnNJDh8nOJIcM0XtXG')
+
+# Déploiement suivi logbook
+rsconnect::deployApp(
+  appDir = "/Users/thomashusson/Documents/R/Logbook/appinternespourcentages",
+  appName = "SuiviLogbook",
+  launch.browser = TRUE
+)
+
+# Déploiement carte-logbook-v1
+rsconnect::deployApp(
+  appDir = "/Users/thomashusson/Documents/R/Logbook/appcarte",
+  appName = "CarteLogbook",
+  launch.browser = TRUE
+)
+
+# Déploiement calculateur-logbook-v1
+rsconnect::deployApp(
+  appDir = "/Users/thomashusson/Documents/R/Logbook/app1",
+  appName = "CalculateurLogbook",
+  launch.browser = TRUE
+)
+
+
