@@ -3382,34 +3382,6 @@ ggplot(df_aise, aes(x = factor(annee_DES), y = pct, fill = Geste_a_l_aise)) +
   theme_minimal(base_size = 14)
 
 ##--------------------------------------------
-##-------TYPE DE GESTE PAR PHASE--------
-df <- df %>%
-  mutate(
-    GESTE_SIMPLE = case_when(
-      QUEL_GESTE_0No_1paroi_2dissection_3anastomose_4Tout %in% c("Paroi", "Incision", "Fermeture aponévrose") ~ "Petit",
-      !is.na(QUEL_GESTE_0No_1paroi_2dissection_3anastomose_4Tout) ~ "Gros",
-      TRUE ~ NA_character_
-    ),
-    GESTE_SIMPLE = factor(GESTE_SIMPLE, levels = c("Petit", "Gros"))
-  )
-
-tbl_type_geste_phase <- df %>%
-  filter(!is.na(phase), !is.na(GESTE_SIMPLE)) %>%
-  tbl_summary(
-    by = phase,
-    include = GESTE_SIMPLE,
-    statistic = all_categorical() ~ "{n} ({p}%)",
-    missing = "no"
-  ) %>%
-  add_p() %>%
-  modify_header(label = "**Type de geste réalisé**") %>%
-  bold_labels() %>%
-  italicize_levels()
-
-tbl_type_geste_phase
-
-
-##--------------------------------------------
 ##-------PÉDAGOGIE--------
 # Tableau de répartition
 df %>%
@@ -4427,6 +4399,7 @@ tableau_final_operateurs
 # - classement_ambiance : classement par ambiance
 ##--------------------------------------------
 ##-------LANCEMENT APPLICATIONS SHINY--------
+library(shiny)
 # Sauvegarde du dataframe dans les deux applications Shiny
 saveRDS(df, file = "/Users/thomashusson/Documents/R/Logbook/appinternespourcentages/logbook_data.rds")
 saveRDS(df, file = "/Users/thomashusson/Documents/R/Logbook/appcarte/logbook_data.rds")
