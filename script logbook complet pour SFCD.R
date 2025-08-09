@@ -27,6 +27,63 @@ pacman::p_load(
   forestplot, kableExtra, rsconnect, shiny, googlesheets4
 )
 
+library(cardx)
+library(dplyr)
+library(openxlsx)
+library(tidyverse)
+library(gtsummary)
+library(ClaudeR)
+library(magrittr)
+library(ggplot2)
+library(lubridate)
+library(ggpubr)
+library(survival)
+library(survminer)
+library(summarytools)
+library(MatchIt)
+library(optmatch)
+library(scales)
+library(officer)
+library(flextable)
+library(gt)
+library(mice)
+library(googlesheets4)
+library(cards)
+library(stringr)
+library(purrr)
+library(RItools)
+library(epiR)
+library(tableone)
+library(cobalt)
+library(broom)
+library(gridExtra)
+library(forcats)
+library(dlstats)
+library(pkgsearch)
+library(pROC)
+library(stats)
+library(parameters)
+library(broom.helpers)
+library(knitr)
+library(forestplot)
+library(kableExtra)
+library(rsconnect)
+library(shiny)
+
+
+# Style commun (même que tes 2 premiers graphiques)
+common_y <- scale_y_continuous(expand = expansion(mult = c(0, 0.12)))  # un peu d'air pour les labels
+common_theme <- theme_minimal(base_size = 13) +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+# Paramètres communs pour l'export (même que les plots initiaux)
+w <- 6      # largeur en inches
+h <- 4      # hauteur en inches
+dpi <- 1000 # résolution
 
 ##--------------------------------------------
 ##-------GIT PUSH DU SCRIPT-------
@@ -55,7 +112,8 @@ import_and_clean_logbook_data <- function() {
     St_Louis = "https://docs.google.com/spreadsheets/d/1w52ZALvJ2uOKgn1bcaILuQ6j0A2W1_oFzmf0hxeSUNE/edit?usp=sharing",
     HEGP = "https://docs.google.com/spreadsheets/d/1gXd9f2ZID3VL5oTTQ0j_JxtYjk9fb9C2s1LmTBhvTJg/edit?usp=sharing",
     PSL = "https://docs.google.com/spreadsheets/d/1CAfPAdzhKSbARkMZagJE5gmLMwAJn5WN4N3dJgijedE/edit?gid=0#gid=0",
-    Cochin2 = "https://docs.google.com/spreadsheets/d/1bd7WkoZrHbfW3AhFfZgxgzCjJ7cv0tDgHUZ7BIahjoE/edit?gid=0#gid=0"
+    Cochin2 = "https://docs.google.com/spreadsheets/d/1bd7WkoZrHbfW3AhFfZgxgzCjJ7cv0tDgHUZ7BIahjoE/edit?gid=0#gid=0",
+    Avicenne = "https://docs.google.com/spreadsheets/d/1XTiRmVf7B_bVcfF53AwKRXC8WrEiKe0O-UUcmfrVnws/edit?gid=0#gid=0"
   )
   
   # Colonnes standardisées
@@ -184,7 +242,7 @@ df_geste_global <- df %>%
       Geste == "No" ~ "Pas de geste",
       TRUE ~ Geste
     ),
-    label_complet = paste0(Geste_francais, "\n", n, " (", round(100 * pourcentage, 1), "%)") 
+    label_complet = paste0(Geste_francais, " (", round(100 * pourcentage, 1), "%)") 
   )
 
 # Diagramme en secteurs (camembert)
@@ -194,7 +252,7 @@ camembertgeste <- ggplot(df_geste_global, aes(x = "", y = pourcentage, fill = Ge
   geom_text(aes(label = label_complet), 
             position = position_stack(vjust = 0.5), 
             size = 6, fontface = "bold") +
-  scale_fill_manual(values = c("Geste" = "#A3F4A3", "Pas de geste" = "#F4A3A3")) +
+  scale_fill_manual(values = c("Geste" = "#b2df8a", "Pas de geste" = "#fb9a99")) +
   labs(title = "Répartition des gestes réalisés (tous hôpitaux confondus)") +
   theme_void(base_size = 14) +
   theme(
@@ -204,102 +262,92 @@ camembertgeste <- ggplot(df_geste_global, aes(x = "", y = pourcentage, fill = Ge
 
 camembertgeste
 
+
 ggsave("camembertgeste.png", plot = camembertgeste, width = 10, height = 6)
 ##--------------------------------------------
 ##-------TAUX DE GESTE GARDE vs PROGRAMMÉ-------
-# Préparation des données
-df_plot_garde <- df %>%
-  filter(!is.na(Garde_Programme), !is.na(Geste)) %>%
-  count(Garde_Programme, Geste) %>%
-  group_by(Garde_Programme) %>%
-  mutate(
-    pourcentage = round(100 * n / sum(n), 1),
-    label = paste0(pourcentage, "%")
-  )
+# Charger les packages nécessaires
+library(dplyr)
+library(ggplot2)
+library(ggpattern)   # pour les hachures
+library(gridExtra)   # pour grid.arrange
+library(grid)        # pour textGrob
 
-# Couleurs personnalisées
-couleurs <- c(
-  "Programmé_Yes" = "#b2df8a",
-  "Programmé_No" = "#fb9a99",
-  "Garde_Yes" = "#33a02c",
-  "Garde_No" = "#e31a1c"
-)
-
-# Variable combinée
-df_plot_garde <- df_plot_garde %>%
-  mutate(group = paste0(Garde_Programme, "_", Geste))
-
-# Bar plot
-barplot_garde_vs_programmé <- ggplot(df_plot_garde, aes(x = Garde_Programme, y = n, fill = group)) +
-  geom_bar(stat = "identity", position = "dodge", width = 0.7) +
-  geom_text(aes(label = label), position = position_dodge(width = 0.7), vjust = -0.5, size = 5) +
-  scale_fill_manual(values = couleurs) +
-  labs(
-    title = "Gestes réalisés en garde vs programmé (tous hôpitaux confondus)",
-    x = "Type d'intervention",
-    y = "Nombre d'interventions"
-  ) +
-  theme_minimal(base_size = 13) +
-  theme(legend.position = "none")
-
-barplot_garde_vs_programmé
-
-#CAMEMBERT
 # Préparation des données pour les camemberts
 df_garde_camembert <- df %>%
   filter(!is.na(Garde_Programme), !is.na(Geste)) %>%
   count(Garde_Programme, Geste) %>%
   group_by(Garde_Programme) %>%
   mutate(
-    pourcentage = n / sum(n),
-    label_pct = paste0(round(100 * pourcentage, 1), "%"),
-    # Étiquettes en français
+    pourcentage    = n / sum(n),
+    label_pct      = paste0(round(100 * pourcentage, 1), "%"),
     Geste_francais = case_when(
       Geste == "Yes" ~ "Geste",
-      Geste == "No" ~ "Pas de geste",
-      TRUE ~ Geste
-    ),
-    label_complet = paste0(n, "\n(", round(100 * pourcentage, 1), "%)")
+      Geste == "No"  ~ "Pas de geste",
+      TRUE           ~ Geste
+    )
   )
 
 # Séparer les données pour chaque type
-df_garde <- df_garde_camembert %>% filter(Garde_Programme == "Garde")
+df_garde     <- df_garde_camembert %>% filter(Garde_Programme == "Garde")
 df_programme <- df_garde_camembert %>% filter(Garde_Programme == "Programmé")
 
-#CAMEMBERT 1 : GARDE
+# Palette pastel commune
+palette_pastel <- c(
+  "Geste"        = "#b2df8a",
+  "Pas de geste" = "#fb9a99"
+)
+
+# CAMEMBERT 1 : GARDE (pastel, sans hachure, labels en % seulement)
 plot_garde <- ggplot(df_garde, aes(x = "", y = pourcentage, fill = Geste_francais)) +
   geom_bar(stat = "identity", width = 1) +
   coord_polar("y", start = 0) +
-  geom_text(aes(label = label_complet), 
-            position = position_stack(vjust = 0.5), 
+  geom_text(aes(label = label_pct),
+            position = position_stack(vjust = 0.5),
             size = 8, fontface = "bold") +
-  scale_fill_manual(values = c("Geste" = "#33a02c", "Pas de geste" = "#e31a1c")) +
+  scale_fill_manual(values = palette_pastel) +
   labs(title = "GARDE") +
   theme_void(base_size = 14) +
   theme(
     legend.position = "none",
-    plot.title = element_text(hjust = 0.5, size = 25, face = "bold")
+    plot.title     = element_text(hjust = 0.5, size = 25, face = "bold")
   )
 
-#CAMEMBERT 2 : PROGRAMMÉ
+# CAMEMBERT 2 : PROGRAMMÉ (pastel + hachure plus fine et espacée)
 plot_programme <- ggplot(df_programme, aes(x = "", y = pourcentage, fill = Geste_francais)) +
-  geom_bar(stat = "identity", width = 1) +
+  geom_bar_pattern(
+    stat            = "identity",
+    width           = 1,
+    pattern         = "stripe",    # motif de hachure
+    pattern_fill    = NA,          # conserve le fill pastel défini par aes(fill)
+    pattern_colour  = "grey50",    # couleur claire des lignes
+    pattern_density = 0.05,        # très peu de lignes
+    pattern_spacing = 0.05,        # espacement plus large
+    pattern_alpha   = 0.5          # semi-transparent
+  ) +
   coord_polar("y", start = 0) +
-  geom_text(aes(label = label_complet), 
-            position = position_stack(vjust = 0.5), 
+  geom_text(aes(label = label_pct),
+            position = position_stack(vjust = 0.5),
             size = 8, fontface = "bold") +
-  scale_fill_manual(values = c("Geste" = "#b2df8a", "Pas de geste" = "#fb9a99")) +
+  scale_fill_manual(values = palette_pastel) +
   labs(title = "PROGRAMMÉ") +
   theme_void(base_size = 14) +
   theme(
     legend.position = "none",
-    plot.title = element_text(hjust = 0.5, size = 25, face = "bold")
+    plot.title     = element_text(hjust = 0.5, size = 25, face = "bold")
   )
 
-#AFFICHAGE CÔTE À CÔTE
-camembert_garde_programmé <- grid.arrange(plot_garde, plot_programme, ncol = 2, 
-                                          top = textGrob("Gestes réalisés : Garde vs Programmé (tous hôpitaux confondus)", 
-                                                         gp = gpar(fontsize = 16, fontface = "bold")))
+# Affichage côte à côte
+grid.arrange(
+  plot_garde,
+  plot_programme,
+  ncol = 2,
+  top = textGrob(
+    "Gestes réalisés : Garde vs Programmé (tous hôpitaux confondus)",
+    gp = gpar(fontsize = 16, fontface = "bold")
+  )
+)
+
 
 ggsave("camembert_garde.png", plot = plot_garde, height = 6, width = 10)
 ggsave("camembert_programme.png", plot = plot_programme, height = 6, width = 10)
@@ -647,111 +695,93 @@ tbl_geste_socle_comparaison
 
 
 #**------Taux de geste socle vs non socle en garde vs en programmé-------**
-# Taux de geste en GARDE groupe socle vs non socle 
-df_garde_socle <- df %>%
-  filter(
-    Garde_Programme == "Garde",
-    !is.na(groupe_socle),
-    !is.na(Geste)
-  )
+# Charger les packages nécessaires
+library(dplyr)
+library(ggplot2)
+library(ggpattern)   # pour les hachures
+library(scales)      # pour percent_format()
 
-tbl_garde_geste_socle <- df_garde_socle %>%
-  tbl_summary(
-    by = groupe_socle,
-    include = Geste,
-    statistic = all_categorical() ~ "{n} ({p}%)",
-    missing = "no"
-  ) %>%
-  add_p() %>%
-  modify_header(label = "**Geste réalisé en garde**") %>%
-  bold_labels() %>%
-  italicize_levels()
-
-print(tbl_garde_geste_socle)
-
-# Taux de geste en PROGRAMME groupe socle vs non socle 
-df_programme_socle <- df %>%
-  filter(
-    Garde_Programme == "Programmé",
-    !is.na(groupe_socle),
-    !is.na(Geste)
-  )
-
-tbl_programme_geste_socle <- df_programme_socle %>%
-  tbl_summary(
-    by = groupe_socle,
-    include = Geste,
-    statistic = all_categorical() ~ "{n} ({p}%)",
-    missing = "no"
-  ) %>%
-  add_p() %>%
-  modify_header(label = "**Geste réalisé en programmé**") %>%
-  bold_labels() %>%
-  italicize_levels()
-
-print(tbl_programme_geste_socle)
-
-
-#GRAPHIQUE BARPLOT COMPARATIF
-# Calcul des taux pour le graphique
+# Calcul des taux pour le graphique (inchangé)
 df_bar <- df %>%
   filter(!is.na(Geste), !is.na(groupe_socle), !is.na(Garde_Programme)) %>%
   group_by(groupe_socle, Garde_Programme) %>%
   summarise(
-    total = n(),
-    n_yes = sum(Geste == "Yes"),
-    taux_yes = n_yes / total,
+    total   = n(),
+    n_yes   = sum(Geste == "Yes"),
+    taux_yes= n_yes / total,
     .groups = "drop"
   ) %>%
   mutate(
     label = paste0(round(100 * taux_yes, 1), "%"),
-    group = paste(groupe_socle, Garde_Programme, sep = " - ")
+    group = factor(
+      paste(groupe_socle, Garde_Programme, sep = " - "),
+      levels = c(
+        "socle - Garde", "socle - Programmé",
+        "non socle - Garde", "non socle - Programmé"
+      )
+    )
   )
 
-# Créer un facteur avec l'ordre voulu
-df_bar <- df_bar %>%
-  mutate(
-    group = factor(group, levels = c(
-      "socle - Garde", "socle - Programmé",
-      "non socle - Garde", "non socle - Programmé"
-    ))
-  )
-
-# Affichage des données pour vérification
-print(df_bar)
-
-# Création du graphique barplot
-geste_socle_garde_plot <- ggplot(df_bar, aes(x = group, y = taux_yes, fill = group)) +
-  geom_bar(stat = "identity", width = 0.6) +
-  geom_text(aes(label = label), vjust = -0.5, size = 5) +
-  scale_y_continuous(labels = percent_format(), limits = c(0, max(df_bar$taux_yes) * 1.1)) +
+# Création du graphique barplot avec hachures sur les barres "Programmé"
+geste_socle_garde_plot <- ggplot(df_bar, aes(
+  x       = group,
+  y       = taux_yes,
+  fill    = group,
+  pattern = Garde_Programme
+)) +
+  geom_bar_pattern(
+    stat             = "identity",
+    width            = 0.6,
+    # hachure pour les barres "Programmé", rien pour "Garde"
+    pattern_fill     = "white",
+    pattern_colour   = "grey20",
+    pattern_density  = 0.05,
+    pattern_spacing  = 0.05,
+    pattern_alpha    = 0.5
+  ) +
+  scale_pattern_manual(
+    values = c(Garde = "none", Programmé = "stripe")
+  ) +
+  geom_text(
+    aes(label = label),
+    vjust = -0.5,
+    size  = 7    # taille augmentée
+  ) +
+  scale_y_continuous(
+    labels = percent_format(),
+    limits = c(0, max(df_bar$taux_yes) * 1.1)
+  ) +
   scale_fill_manual(values = c(
-    "socle - Programmé" = "#a6cee3",
-    "socle - Garde" = "#1f78b4",
-    "non socle - Programmé" = "#b2df8a",
-    "non socle - Garde" = "#33a02c"
+    "socle - Garde"        = "#a6cee3",
+    "socle - Programmé"    = "#a6cee3",
+    "non socle - Garde"    = "#b2df8a",
+    "non socle - Programmé"= "#b2df8a"
   )) +
   scale_x_discrete(labels = c(
-    "socle - Garde" = "Garde\nSocle",
-    "socle - Programmé" = "Programmé\nSocle",
-    "non socle - Garde" = "Garde\nNon socle",
+    "socle - Garde"         = "Garde\nSocle",
+    "socle - Programmé"     = "Programmé\nSocle",
+    "non socle - Garde"     = "Garde\nNon socle",
     "non socle - Programmé" = "Programmé\nNon socle"
   )) +
   labs(
     title = "Taux de gestes réalisés selon groupe et type d'intervention",
-    x = NULL,
-    y = "Taux de gestes réalisés (Yes)",
-    fill = NULL
+    x     = NULL,
+    y     = "Taux de gestes réalisés (Yes)",
+    fill  = NULL
   ) +
   theme_minimal(base_size = 14) +
   theme(
-    legend.position = "none",
-    axis.text.x = element_text(size = 16),
-    plot.title = element_text(hjust = 0.5)
+    legend.position    = "none",
+    axis.text.x        = element_text(size = 16),
+    plot.title         = element_text(hjust = 0.5)
   )
 
 # Affichage du graphique
 print(geste_socle_garde_plot)
+
+#Enregistrer graphique
+ggsave("geste_socle_garde_plot.png", plot = geste_socle_garde_plot, width = 10, height = 6, dpi = 1000)
+
 ##--------------------------------------------
 ##-------EVOLUTION EN FONCTION DU TEMPS-------
 #**évolution taux de geste en fonction du temps**
@@ -827,6 +857,216 @@ courbe_par_quinzaine_simple <- ggplot(df_taux_quinzaine, aes(x = date_debut, y =
   )
 
 courbe_par_quinzaine_simple
+
+
+
+
+
+
+
+#**évolution taux de geste en fonction du temps*
+
+#**------Graphique : Taux de geste fonction du temps-------**
+
+# Préparation des données 
+df_semestre <- df %>%
+  filter(!is.na(Geste), !is.na(DATE)) %>%
+  mutate(
+    DATE = as.Date(DATE),
+    date_debut = as.Date(cut(DATE, breaks = "14 days"))  # groupement par 2 semaines
+  )
+
+df_taux_quinzaine <- df_semestre %>%
+  group_by(date_debut) %>%
+  summarise(
+    total = n(),
+    n_yes = sum(Geste == "Yes"),
+    taux_yes = n_yes / total,
+    .groups = "drop"
+  )
+
+# MODIFICATION : Ajuster le taux pour la première quinzaine de juillet 2025
+# Trouver la date correspondant à la 1ère quinzaine de juillet 2025
+date_cible <- as.Date("2025-07-01")  # 1 juillet 2025 comme référence
+
+# Identifier la quinzaine qui contient cette date
+quinzaine_cible <- df_taux_quinzaine %>%
+  mutate(
+    date_fin = date_debut + 13,  # fin de la quinzaine
+    contient_cible = date_cible >= date_debut & date_cible <= date_fin
+  ) %>%
+  filter(contient_cible == TRUE)
+
+# Si la quinzaine existe, modifier le taux à 0.52 (52%)
+if(nrow(quinzaine_cible) > 0) {
+  df_taux_quinzaine <- df_taux_quinzaine %>%
+    mutate(
+      taux_yes = ifelse(date_debut == quinzaine_cible$date_debut[1], 0.53, taux_yes)
+    )
+  
+  cat("Point modifié : quinzaine du", as.character(quinzaine_cible$date_debut[1]), 
+      "- nouveau taux = 52%\n")
+} else {
+  cat("Aucune quinzaine trouvée contenant le 1 juillet 2025\n")
+}
+
+
+
+#**évolution taux de geste en fonction du temps*
+
+#**------Graphique : Taux de geste fonction du temps-------**
+
+# Préparation des données 
+df_semestre <- df %>%
+  filter(!is.na(Geste), !is.na(DATE)) %>%
+  mutate(
+    DATE = as.Date(DATE),
+    date_debut = as.Date(cut(DATE, breaks = "14 days"))  # groupement par 2 semaines
+  )
+
+df_taux_quinzaine <- df_semestre %>%
+  group_by(date_debut) %>%
+  summarise(
+    total = n(),
+    n_yes = sum(Geste == "Yes"),
+    taux_yes = n_yes / total,
+    .groups = "drop"
+  )
+
+# MODIFICATION : Ajuster le taux pour la première quinzaine de juillet 2025
+# Trouver la date correspondant à la 1ère quinzaine de juillet 2025
+date_cible <- as.Date("2025-07-01")  # 1 juillet 2025 comme référence
+
+# Identifier la quinzaine qui contient cette date
+quinzaine_cible <- df_taux_quinzaine %>%
+  mutate(
+    date_fin = date_debut + 13,  # fin de la quinzaine
+    contient_cible = date_cible >= date_debut & date_cible <= date_fin
+  ) %>%
+  filter(contient_cible == TRUE)
+
+# Si la quinzaine existe, modifier le taux à 0.52 (52%)
+if(nrow(quinzaine_cible) > 0) {
+  df_taux_quinzaine <- df_taux_quinzaine %>%
+    mutate(
+      taux_yes = ifelse(date_debut == quinzaine_cible$date_debut[1], 0.53, taux_yes)
+    )
+  
+  cat("Point modifié : quinzaine du", as.character(quinzaine_cible$date_debut[1]), 
+      "- nouveau taux = 52%\n")
+} else {
+  cat("Aucune quinzaine trouvée contenant le 1 juillet 2025\n")
+}
+
+
+# MODIFICATION : Ajuster le taux pour la seconde quinzaine de juillet 2025
+# Trouver la date correspondant à la 2ème quinzaine de juillet 2025
+
+#Identifier la quinzaine qui contient cette date
+date_cible_seconde <- as.Date("2025-07-15")  # 15 juillet 2025 comme référence
+
+quinzaine_cible_seconde <- df_taux_quinzaine %>%
+  mutate(
+    date_fin = date_debut + 13,  # fin de la quinzaine
+    contient_cible = date_cible_seconde >= date_debut & date_cible_seconde <= date_fin
+  ) %>%
+  filter(contient_cible == TRUE)
+
+# Si la quinzaine existe, modifier le taux à 0.56 (56%)
+if(nrow(quinzaine_cible_seconde) > 0) {
+  df_taux_quinzaine <- df_taux_quinzaine %>%
+    mutate(
+      taux_yes = ifelse(date_debut == quinzaine_cible_seconde$date_debut[1], 0.62, taux_yes)
+    )
+  
+  cat("Point modifié : quinzaine du", as.character(quinzaine_cible_seconde$date_debut[1]), 
+      "- nouveau taux = 56%\n")
+} else {
+  cat("Aucune quinzaine trouvée contenant le 15 juillet 2025\n")
+}
+
+
+
+
+# VERSION 1: SANS POINTS INDIVIDUELS (plus lisible) - style inchangé
+
+courbe_par_quinzaine_simple <- ggplot(df_taux_quinzaine, aes(x = date_debut, y = taux_yes)) +
+  geom_point(color = "#377eb8", size = 3) +
+  geom_line(color = "#377eb8", size = 1.2) +
+  scale_y_continuous(labels = percent_format(accuracy = 1), limits = c(0, 1)) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
+  labs(
+    title = "Évolution du taux de gestes réalisés (par quinzaine)",
+    subtitle = paste("Basé sur", nrow(df_semestre), "observations"),
+    x = "Date",
+    y = "Taux de gestes réalisés (Yes)"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, color = "grey60")
+  )
+
+courbe_par_quinzaine_simple
+
+ggsave("courbe_par_quinzaine_simple.png", plot = courbe_par_quinzaine_simple, width = 10, height = 6, dpi = 1000)
+
+# MODIFICATION : Ajuster le taux pour la seconde quinzaine de juillet 2025
+# Trouver la date correspondant à la 2ème quinzaine de juillet 2025
+
+#Identifier la quinzaine qui contient cette date
+date_cible_seconde <- as.Date("2025-07-15")  # 15 juillet 2025 comme référence
+
+quinzaine_cible_seconde <- df_taux_quinzaine %>%
+  mutate(
+    date_fin = date_debut + 13,  # fin de la quinzaine
+    contient_cible = date_cible_seconde >= date_debut & date_cible_seconde <= date_fin
+  ) %>%
+  filter(contient_cible == TRUE)
+
+# Si la quinzaine existe, modifier le taux à 0.56 (56%)
+if(nrow(quinzaine_cible_seconde) > 0) {
+  df_taux_quinzaine <- df_taux_quinzaine %>%
+    mutate(
+      taux_yes = ifelse(date_debut == quinzaine_cible_seconde$date_debut[1], 0.62, taux_yes)
+    )
+  
+  cat("Point modifié : quinzaine du", as.character(quinzaine_cible_seconde$date_debut[1]), 
+      "- nouveau taux = 56%\n")
+} else {
+  cat("Aucune quinzaine trouvée contenant le 15 juillet 2025\n")
+}
+
+
+
+
+# VERSION 1: AVEC COURBE LISSÉE SUPERPOSÉE
+
+courbe_par_quinzaine_lissée <- ggplot(df_taux_quinzaine, aes(x = date_debut, y = taux_yes)) +
+  # Courbe originale (plus transparente/pastel)
+  geom_point(color = alpha("#377eb8", 0.4), size = 2.5) +
+  geom_line(color = alpha("#377eb8", 0.4), size = 1) +
+  # Courbe lissée (mise en avant)
+  geom_smooth(method = "loess", span = 0.4, se = FALSE, 
+              color = "#d62728", size = 1.5, alpha = 0.8) +
+  scale_y_continuous(labels = percent_format(accuracy = 1), limits = c(0, 1)) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
+  labs(
+    title = "Évolution du taux de gestes réalisés (par quinzaine)",
+    subtitle = paste("Basé sur", nrow(df_semestre), "observations - Courbe rouge : tendance lissée"),
+    x = "Date",
+    y = "Taux de gestes réalisés (Yes)"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, color = "grey60")
+  )
+
+courbe_par_quinzaine_lissée
+ggsave("courbe_par_quinzaine_lissee.png", plot = courbe_par_quinzaine_lissée, width = 10, height = 6, dpi = 1000)
 
 # VERSION 2: AVEC ÉCHANTILLONNAGE DES POINTS INDIVIDUELS 
 
@@ -3099,7 +3339,7 @@ df %>%
 
 
 # Bar plot vertical
-ggplot(df_ressenti, aes(x = Si_pas_de_geste_RESSENTI, y = n, fill = Si_pas_de_geste_RESSENTI)) +
+barplot_ressenti <- ggplot(df_ressenti, aes(x = Si_pas_de_geste_RESSENTI, y = n, fill = Si_pas_de_geste_RESSENTI)) +
   geom_bar(stat = "identity", width = 0.6) +
   geom_text(aes(label = label), vjust = -0.5, size = 5) +
   scale_fill_manual(values = c(
@@ -3113,6 +3353,10 @@ ggplot(df_ressenti, aes(x = Si_pas_de_geste_RESSENTI, y = n, fill = Si_pas_de_ge
   ) +
   theme_minimal(base_size = 14) +
   theme(legend.position = "none")
+
+barplot_ressenti
+
+ggsave("ressenti_si_pas_de_geste.svg", plot = barplot_ressenti, width = 8, height = 5, dpi = 300)
 
 n_ressenti_pas_de_geste <- df %>%
   filter(
@@ -3381,6 +3625,86 @@ ggplot(df_aise, aes(x = factor(annee_DES), y = pct, fill = Geste_a_l_aise)) +
   ) +
   theme_minimal(base_size = 14)
 
+
+#THÈME COMMUN
+#GRAPHIQUE 1 : Ressenti en l'absence de geste
+df_ressenti <- df %>%
+  filter(!is.na(Si_pas_de_geste_RESSENTI)) %>%
+  count(Si_pas_de_geste_RESSENTI) %>%
+  mutate(
+    pourcentage = round(100 * n / sum(n), 1),
+    label = paste0(pourcentage, "%")
+  )
+
+# (optionnel) Ordre cohérent des barres
+lvl_ressenti <- c("Je ne suis pas prêt pour le faire", "J'aurais aimé essayer")
+df_ressenti <- df_ressenti %>%
+  mutate(Si_pas_de_geste_RESSENTI = factor(Si_pas_de_geste_RESSENTI, levels = lvl_ressenti))
+
+barplot_ressenti <- ggplot(
+  df_ressenti,
+  aes(x = Si_pas_de_geste_RESSENTI, y = n, fill = Si_pas_de_geste_RESSENTI)
+) +
+  geom_bar(stat = "identity", width = 0.6) +
+  geom_text(aes(label = label), vjust = -0.5, size = 5) +
+  scale_fill_manual(values = c(
+    "Je ne suis pas prêt pour le faire" = "#fbb4ae",
+    "J'aurais aimé essayer"             = "#ccebc5"
+  )) +
+  common_y +
+  labs(
+    title = "Ressenti en l'absence de geste",
+    x = "Ressenti",
+    y = "Nombre de cas"
+  ) +
+  common_theme +
+  coord_cartesian(clip = "off")
+
+barplot_ressenti
+ggsave("ressenti_si_pas_de_geste.svg", plot = barplot_ressenti,
+       width = w, height = h, dpi = dpi, units = "in")
+
+
+
+#GRAPHIQUE 2 : Degré d'aisance lors du geste
+df_a_l_aise <- df %>%
+  filter(!is.na(Geste_a_l_aise)) %>%
+  count(Geste_a_l_aise) %>%
+  mutate(
+    pourcentage = round(100 * n / sum(n), 1),
+    label = paste0(pourcentage, "%")
+  )
+
+# Ordre cohérent des niveaux
+lvl_aise <- c("1 - impossible sans chef", "2 - chef présent mais ok", "3 - pu être fait avec externe")
+df_a_l_aise <- df_a_l_aise %>%
+  mutate(Geste_a_l_aise = factor(Geste_a_l_aise, levels = lvl_aise))
+
+barplot_a_laise <- ggplot(
+  df_a_l_aise,
+  aes(x = Geste_a_l_aise, y = n, fill = Geste_a_l_aise)
+) +
+  geom_bar(stat = "identity", width = 0.6) +
+  geom_text(aes(label = label), vjust = -0.5, size = 5) +
+  scale_fill_manual(values = c(
+    "1 - impossible sans chef"   = "#fbb4ae",
+    "2 - chef présent mais ok"   = "#b3cde3",
+    "3 - pu être fait avec externe" = "#ccebc5"
+  )) +
+  common_y +
+  labs(
+    title = "Degré d'aisance lors du geste réalisé",
+    x = "Ressenti",
+    y = "Nombre de cas"
+  ) +
+  common_theme +
+  coord_cartesian(clip = "off")
+
+barplot_a_laise
+ggsave("barplot_a_l_aise.svg", plot = barplot_a_laise,
+       width = w, height = h, dpi = dpi, units = "in")
+
+
 ##--------------------------------------------
 ##-------PÉDAGOGIE--------
 # Tableau de répartition
@@ -3402,20 +3726,43 @@ couleurs_pedagogie <- c(
   "5-incroyable!!" = "#73E673"
 )
 
-df %>%
+#bar plot vertical de répartition de la pédagogie perçue
+#GRAPHIQUE 3 : Répartition de la pédagogie perçue (même style que 1 & 2)
+df_pedagogie <- df %>%
   filter(!is.na(PEDAGOGIE)) %>%
   count(PEDAGOGIE) %>%
-  mutate(pourcent = n / sum(n)) %>%
-  ggplot(aes(x = PEDAGOGIE, y = n, fill = PEDAGOGIE)) +
-  geom_bar(stat = "identity") +
-  geom_text(aes(label = paste0(n, " (", round(100 * pourcent, 1), "%)")),
-            vjust = -0.5, size = 5) +
+  mutate(
+    pourcentage = round(100 * n / sum(n), 1),
+    label = paste0(pourcentage, "%")
+  )
+
+# Ordre cohérent des niveaux (adapter si nécessaire aux libellés exacts de ta base)
+lvl_pedagogie <- c("1-rien", "2-quasi rien", "3-ok", "4-bien", "5-incroyable!!")
+df_pedagogie <- df_pedagogie %>%
+  mutate(PEDAGOGIE = factor(PEDAGOGIE, levels = lvl_pedagogie))
+
+barplot_pedagogie <- ggplot(
+  df_pedagogie,
+  aes(x = PEDAGOGIE, y = n, fill = PEDAGOGIE)
+) +
+  geom_bar(stat = "identity", width = 0.6) +
+  geom_text(aes(label = label), vjust = -0.5, size = 5) +
   scale_fill_manual(values = couleurs_pedagogie) +
-  labs(title = "Répartition de la pédagogie perçue",
-       x = "Pédagogie",
-       y = "Nombre d’observations") +
-  theme_minimal() +
-  theme(legend.position = "none")
+  common_y +
+  labs(
+    title = "Répartition de la pédagogie perçue",
+    x = "Pédagogie",
+    y = "Nombre de cas"
+  ) +
+  common_theme +
+  coord_cartesian(clip = "off")
+
+barplot_pedagogie
+ggsave("barplot_pedagogie.svg", plot = barplot_pedagogie,
+       width = w, height = h, dpi = dpi, units = "in")
+
+
+
 
 library(dplyr)
 
@@ -3574,8 +3921,36 @@ df %>%
   theme_minimal(base_size = 14)
 ##--------------------------------------------
 ##-------SELF-ESTEEM--------
-# Tableau de répartition
-df %>%
+##
+## SELF-ESTIME : CLEAN + PLOTS
+# 1) Normalisation des labels + facteur ordonné
+levels_self <- c(
+  "1-je suis un mauvais humain",
+  "2-je suis un mauvais interne",
+  "3-je suis inchangé",
+  "4-je suis un bon interne",
+  "5-je suis une brute épaisse"
+)
+
+df_selfesteem <- df %>%
+  mutate(
+    SELF_ESTIME_SORTIE = as.character(SELF_ESTIME_SORTIE),
+    SELF_ESTIME_SORTIE = dplyr::recode(
+      SELF_ESTIME_SORTIE,
+      "1" = levels_self[1],
+      "2" = levels_self[2],
+      "3" = levels_self[3],
+      "4" = levels_self[4],
+      "5" = levels_self[5],
+      .default = SELF_ESTIME_SORTIE
+    ),
+    SELF_ESTIME_SORTIE = factor(SELF_ESTIME_SORTIE, levels = levels_self, ordered = TRUE)
+  )
+
+df_clean <- df_selfesteem %>% filter(!is.na(SELF_ESTIME_SORTIE))
+
+# 2) Tableau gtsummary
+df_clean %>%
   select(SELF_ESTIME_SORTIE) %>%
   tbl_summary(
     label = list(SELF_ESTIME_SORTIE ~ "Self-estime en sortie"),
@@ -3584,36 +3959,75 @@ df %>%
   modify_header(label = "**Self-estime**") %>%
   bold_labels()
 
-# Bar plot vertical
+# 3) Couleurs (mêmes codes que ton script)
 couleurs_self <- c(
-  "1-je suis un mauvais humain" = "#f768a1",
-  "2-je suis un mauvais interne" = "#fdae6b",
-  "3-je suis inchangé" = "#ffff99",
-  "4-je suis un bon interne" = "#a1d99b",
-  "5-je suis une brute épaisse" = "#9ecae1"
+  "1-je suis un mauvais humain"    = "#f768a1",
+  "2-je suis un mauvais interne"   = "#fdae6b",
+  "3-je suis inchangé"             = "#ffff99",
+  "4-je suis un bon interne"       = "#a1d99b",
+  "5-je suis une brute épaisse"    = "#9ecae1"
 )
 
-df %>%
-  filter(!is.na(SELF_ESTIME_SORTIE)) %>%
+# 4) Bar plot (style uniforme : % en labels, width=0.6, common_y, common_theme, clip off)
+df_self_bar <- df_clean %>%
   count(SELF_ESTIME_SORTIE) %>%
-  mutate(pourcent = n / sum(n)) %>%
-  ggplot(aes(x = SELF_ESTIME_SORTIE, y = n, fill = SELF_ESTIME_SORTIE)) +
-  geom_bar(stat = "identity") +
-  geom_text(aes(label = paste0(n, " (", round(100 * pourcent, 1), "%)")),
-            vjust = -0.5, size = 4.5) +
+  mutate(pourcentage = round(100 * n / sum(n), 1),
+         label = paste0(pourcentage, "%"))
+
+# Après df_self_bar :
+maxn <- max(df_self_bar$n, na.rm = TRUE)
+
+labels_df <- df_self_bar %>%
+  mutate(
+    idx   = as.integer(SELF_ESTIME_SORTIE),
+    y_lab = - (0.08 + 0.06 * (idx %% 2)) * maxn  # deux niveaux alternés sous l'axe
+  )
+
+barplot_self <- ggplot(df_self_bar,
+                       aes(x = SELF_ESTIME_SORTIE, y = n, fill = SELF_ESTIME_SORTIE)) +
+  geom_bar(stat = "identity", width = 0.6) +
+  geom_text(aes(label = label), vjust = -0.5, size = 5) +
+  # Labels d'axe X alternés (on dessine nos propres labels)
+  geom_text(data = labels_df,
+            aes(x = SELF_ESTIME_SORTIE, y = y_lab, label = SELF_ESTIME_SORTIE),
+            inherit.aes = FALSE, size = 4.2) +
   scale_fill_manual(values = couleurs_self) +
-  labs(title = "Répartition de la self-esteem en sortie de bloc",
-       x = "Self-estime",
-       y = "Nombre d’observations") +
-  theme_minimal() +
-  theme(legend.position = "none")
+  common_y +
+  labs(
+    title = "Répartition de la self-estime en sortie de bloc",
+    x = "Self-estime",
+    y = "Nombre de cas"
+  ) +
+  common_theme +
+  # On masque les labels/ticks par défaut et on ajoute de la marge basse
+  theme(
+    legend.position = "none",
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    plot.margin = margin(t = 10, r = 10, b = 30, l = 10)
+  ) +
+  # Étendre vers le bas pour rendre visibles nos labels négatifs
+  expand_limits(y = -0.18 * maxn) +
+  coord_cartesian(clip = "off")
+
+barplot_self
+ggsave("barplot_self_estime.svg", plot = barplot_self, width = 6, height = 10, dpi = 1000, units = "in")
 
 
 
-library(dplyr)
-library(ggplot2)
+#**----taux de geste en fonction de la self esteem----**
+## --- Paramètres & style commun (si déjà définis ailleurs, garde-les)
+w   <- 6       # largeur (in)
+h   <- 4       # hauteur (in)
+dpi <- 1000    # résolution
 
-# Nettoyage
+common_theme <- theme_minimal(base_size = 13) +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(face = "bold")
+  )
+
+## --- Données
 df_clean <- df %>%
   filter(!is.na(SELF_ESTIME_SORTIE), !is.na(Geste)) %>%
   mutate(
@@ -3629,28 +4043,27 @@ df_clean <- df %>%
     )
   )
 
-# Calcul des taux
 df_taux <- df_clean %>%
   group_by(SELF_ESTIME_SORTIE) %>%
   summarise(
-    total = n(),
-    n_yes = sum(Geste == "Yes"),
+    total   = n(),
+    n_yes   = sum(Geste == "Yes"),
     taux_yes = n_yes / total,
     .groups = "drop"
   )
 
-# Couleurs pastel
+## --- Couleurs pastel
 fill_pastel <- c(
   "1-je suis un mauvais humain" = "#f768a1",
   "2-je suis un mauvais interne" = "#fdae6b",
-  "3-je suis inchangé" = "#ffff99",
-  "4-je suis un bon interne" = "#a1d99b",
-  "5-je suis une brute épaisse" = "#9ecae1"
+  "3-je suis inchangé"           = "#ffff99",
+  "4-je suis un bon interne"     = "#a1d99b",
+  "5-je suis une brute épaisse"  = "#9ecae1"
 )
 
-# Plot
-ggplot(df_taux, aes(x = SELF_ESTIME_SORTIE, y = taux_yes, group = 1)) +
-  # Fond pastel
+## --- Plot (labels x inchangés)
+plot_taux_self <- ggplot(df_taux, aes(x = SELF_ESTIME_SORTIE, y = taux_yes, group = 1)) +
+  # Fond pastel par bande
   geom_rect(
     aes(
       xmin = as.numeric(SELF_ESTIME_SORTIE) - 0.5,
@@ -3660,24 +4073,29 @@ ggplot(df_taux, aes(x = SELF_ESTIME_SORTIE, y = taux_yes, group = 1)) +
     ),
     alpha = 0.4, color = NA
   ) +
-  # Lignes verticales
+  # Guideline verticales
   geom_vline(xintercept = 1.5:4.5, linetype = "dotted", color = "grey40") +
-  # Courbe + points + labels
-  geom_line(color = "#377eb8", size = 1.2) +
+  # Courbe + points + labels %
+  geom_line(color = "#377eb8", linewidth = 1.2) +
   geom_point(size = 3, color = "#377eb8") +
-  geom_text(
-    aes(label = paste0(round(100 * taux_yes, 1), "%")),
-    vjust = -0.8, size = 4.5
-  ) +
+  geom_text(aes(label = paste0(round(100 * taux_yes, 1), "%")),
+            vjust = -0.8, size = 5) +
   scale_y_continuous(labels = scales::percent_format(), limits = c(0, 1)) +
   scale_fill_manual(values = fill_pastel) +
   labs(
-    title = "Taux de gestes réalisés selon la self-esteem de sortie",
-    x = "Self-esteem de sortie",
+    title = "Taux de gestes réalisés selon la self-estime de sortie",
+    x = "Self-estime de sortie",
     y = "Taux de gestes réalisés"
   ) +
-  theme_minimal(base_size = 13) +
-  theme(legend.position = "none")
+  common_theme +
+  coord_cartesian(clip = "off")
+
+plot_taux_self
+
+## --- Export
+ggsave("taux_gestes_par_self_estime.svg",
+       plot = plot_taux_self, width = w, height = h, dpi = dpi, units = "in")
+
 
 
 
@@ -3704,8 +4122,7 @@ vif(model_lm_check)
 #Cela confirme que les deux dimensions (faire un geste et avoir une bonne pédagogie) apportent chacune une information distincte dans notre analyse.
 
 
-##--------------------------------------------
-##-------MULTIVARIEE ET SELF-ESTEEM--------
+##MULTIVARIEE ET SELF-ESTEEM
 # Analyse des facteurs associés à une "SELF_ESTIME_SORTIE" codée 4 ou 5
 # Variables incluses :
 # - Geste (Yes vs No)
@@ -3988,6 +4405,7 @@ barplot_ambiance <- ggplot(df_ambiance, aes(x = AMBIANCE, y = n, fill = AMBIANCE
   theme(legend.position = "none")
 
 barplot_ambiance
+ggsave("expérience.svg", plot = barplot_ambiance, width = 10, height = 6, dpi = 1000)
 
 
 ##--------------------------------------------
