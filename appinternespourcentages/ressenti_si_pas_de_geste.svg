@@ -1,0 +1,48 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' width='720.00pt' height='432.00pt' viewBox='0 0 720.00 432.00'>
+<g class='svglite'>
+<defs>
+  <style type='text/css'><![CDATA[
+    .svglite line, .svglite polyline, .svglite polygon, .svglite path, .svglite rect, .svglite circle {
+      fill: none;
+      stroke: #000000;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-miterlimit: 10.00;
+    }
+    .svglite text {
+      white-space: pre;
+    }
+    .svglite g.glyphgroup path {
+      fill: inherit;
+      stroke: none;
+    }
+  ]]></style>
+</defs>
+<rect width='100%' height='100%' style='stroke: none; fill: none;'/>
+<defs>
+  <clipPath id='cpMC4wMHw3MjAuMDB8MC4wMHw0MzIuMDA='>
+    <rect x='0.00' y='0.00' width='720.00' height='432.00' />
+  </clipPath>
+</defs>
+<g clip-path='url(#cpMC4wMHw3MjAuMDB8MC4wMHw0MzIuMDA=)'>
+<polyline points='59.45,381.86 708.04,381.86 ' style='stroke-width: 1.55; stroke: #EBEBEB; stroke-linecap: butt;' />
+<polyline points='59.45,283.65 708.04,283.65 ' style='stroke-width: 1.55; stroke: #EBEBEB; stroke-linecap: butt;' />
+<polyline points='59.45,185.44 708.04,185.44 ' style='stroke-width: 1.55; stroke: #EBEBEB; stroke-linecap: butt;' />
+<polyline points='59.45,87.23 708.04,87.23 ' style='stroke-width: 1.55; stroke: #EBEBEB; stroke-linecap: butt;' />
+<rect x='442.71' y='65.62' width='176.89' height='316.24' style='stroke-width: 1.07; stroke: none; stroke-linecap: butt; stroke-linejoin: miter; fill: #CCEBC5;' />
+<rect x='147.90' y='210.97' width='176.89' height='170.89' style='stroke-width: 1.07; stroke: none; stroke-linecap: butt; stroke-linejoin: miter; fill: #FBB4AE;' />
+<text x='531.16' y='60.53' text-anchor='middle' style='font-size: 14.23px; font-family: "Arial";' textLength='40.31px' lengthAdjust='spacingAndGlyphs'>64.9%</text>
+<text x='236.34' y='205.88' text-anchor='middle' style='font-size: 14.23px; font-family: "Arial";' textLength='40.31px' lengthAdjust='spacingAndGlyphs'>35.1%</text>
+<text x='52.28' y='386.45' text-anchor='end' style='font-size: 12.80px;fill: #4D4D4D; font-family: "Helvetica";' textLength='7.11px' lengthAdjust='spacingAndGlyphs'>0</text>
+<text x='52.28' y='288.24' text-anchor='end' style='font-size: 12.80px;fill: #4D4D4D; font-family: "Helvetica";' textLength='21.33px' lengthAdjust='spacingAndGlyphs'>100</text>
+<text x='52.28' y='190.03' text-anchor='end' style='font-size: 12.80px;fill: #4D4D4D; font-family: "Helvetica";' textLength='21.33px' lengthAdjust='spacingAndGlyphs'>200</text>
+<text x='52.28' y='91.82' text-anchor='end' style='font-size: 12.80px;fill: #4D4D4D; font-family: "Helvetica";' textLength='21.33px' lengthAdjust='spacingAndGlyphs'>300</text>
+<text x='236.34' y='398.21' text-anchor='middle' style='font-size: 12.80px;fill: #4D4D4D; font-family: "Helvetica";' textLength='178.55px' lengthAdjust='spacingAndGlyphs'>Je ne suis pas prêt pour le faire</text>
+<text x='531.16' y='398.21' text-anchor='middle' style='font-size: 12.80px;fill: #4D4D4D; font-family: "Helvetica";' textLength='123.34px' lengthAdjust='spacingAndGlyphs'>J'aurais aimé essayer</text>
+<text x='383.75' y='420.49' text-anchor='middle' style='font-size: 16.00px; font-family: "Helvetica";' textLength='62.30px' lengthAdjust='spacingAndGlyphs'>Ressenti</text>
+<text transform='translate(19.45,207.93) rotate(-90)' text-anchor='middle' style='font-size: 16.00px; font-family: "Helvetica";' textLength='108.56px' lengthAdjust='spacingAndGlyphs'>Nombre de cas</text>
+<text x='383.75' y='21.78' text-anchor='middle' style='font-size: 19.20px; font-weight: bold; font-family: "Helvetica";' textLength='282.89px' lengthAdjust='spacingAndGlyphs'>Ressenti en l'absence de geste</text>
+</g>
+</g>
+</svg>

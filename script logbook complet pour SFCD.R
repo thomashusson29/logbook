@@ -4096,8 +4096,195 @@ plot_taux_self
 ggsave("taux_gestes_par_self_estime.svg",
        plot = plot_taux_self, width = w, height = h, dpi = dpi, units = "in")
 
+#**----pédagogie 4-5 en fonction de la self esteem----**
+df_clean <- df %>%
+  filter(!is.na(SELF_ESTIME_SORTIE), !is.na(PEDAGOGIE)) %>%
+  mutate(
+    SELF_ESTIME_SORTIE = factor(
+      SELF_ESTIME_SORTIE,
+      levels = c(
+        "1-je suis un mauvais humain",
+        "2-je suis un mauvais interne",
+        "3-je suis inchangé",
+        "4-je suis un bon interne",
+        "5-je suis une brute épaisse"
+      )
+    )
+  )
+
+df_pedago_self <- df_clean %>%
+  group_by(SELF_ESTIME_SORTIE) %>%
+  summarise(
+    total   = n(),
+    n_pedago = sum(PEDAGOGIE %in% c("4-bien", "5-incroyable!!")),
+    taux_pedago = n_pedago / total,
+    .groups = "drop"
+  )
+
+# Couleurs pastel pour la self-estime
+fill_pastel_self <- c(
+  "1-je suis un mauvais humain"    = "#f768a1",
+  "2-je suis un mauvais interne"   = "#fdae6b",
+  "3-je suis inchangé"             = "#ffff99",
+  "4-je suis un bon interne"       = "#a1d99b",
+  "5-je suis une brute épaisse"    = "#9ecae1"
+)
+
+# Plot pour le taux de pédagogie 4-5 en fonction de la self-estime
+plot_pedago_self <- ggplot(df_pedago_self, aes(x = SELF_ESTIME_SORTIE, y = taux_pedago, group = 1)) +
+  # Fond pastel par bande
+  geom_rect(
+    aes(
+      xmin = as.numeric(SELF_ESTIME_SORTIE) - 0.5,
+      xmax = as.numeric(SELF_ESTIME_SORTIE) + 0.5,
+      ymin = -Inf, ymax = Inf,
+      fill = SELF_ESTIME_SORTIE
+    ),
+    alpha = 0.4, color = NA
+  ) +
+  # Guideline verticales
+  geom_vline(xintercept = 1.5:4.5, linetype = "dotted", color = "grey40") +
+  # Courbe + points + labels %
+  geom_line(color = "forestgreen", linewidth = 1.2) +
+  geom_point(size = 3, color = "forestgreen") +
+  geom_text(aes(label = paste0(round(100 * taux_pedago, 1), "%")),
+            vjust = -0.8, size = 5) +
+  scale_y_continuous(labels = scales::percent_format(), limits = c(0, 1)) +
+  scale_fill_manual(values = fill_pastel_self) +
+  labs(
+    title = "Taux de pédagogie perçue (4-5) selon la self-estime de sortie",
+    x = "Self-estime de sortie",
+    y = "Taux de pédagogie perçue (4-5)"
+  ) +
+  common_theme +
+  coord_cartesian(clip = "off")
+
+plot_pedago_self
+
+ggsave("taux_pedagogie_par_self_estime.svg",
+       plot = plot_pedago_self, width = w, height = h, dpi = dpi, units = "in")
 
 
+#afficher taux de geste et pédagogie en fonction de la self esteem sur le même graphique
+# Fusion des deux dataframes sur SELF_ESTIME_SORTIE
+df_both <- df_taux %>%
+  select(SELF_ESTIME_SORTIE, taux_yes) %>%
+  left_join(
+    df_pedago_self %>% select(SELF_ESTIME_SORTIE, taux_pedago),
+    by = "SELF_ESTIME_SORTIE"
+  ) %>%
+  pivot_longer(
+    cols = c(taux_yes, taux_pedago),
+    names_to = "type",
+    values_to = "taux"
+  ) %>%
+  mutate(
+    type = recode(type,
+                  "taux_yes" = "Taux de gestes réalisés",
+                  "taux_pedago" = "Taux de pédagogie perçue (4-5)")
+  )
+
+# Plot combiné
+plot_combined <- ggplot(df_both, aes(x = SELF_ESTIME_SORTIE, y = taux, group = type, color = type)) +
+  # Fond pastel par bande
+  geom_rect(
+    data = unique(df_both["SELF_ESTIME_SORTIE"]),
+    aes(
+      xmin = as.numeric(SELF_ESTIME_SORTIE) - 0.5,
+      xmax = as.numeric(SELF_ESTIME_SORTIE) + 0.5,
+      ymin = -Inf, ymax = Inf
+    ),
+    inherit.aes = FALSE,
+    fill = rep(fill_pastel, each = 2)[seq_along(unique(df_both$SELF_ESTIME_SORTIE))],
+    alpha = 0.2
+  ) +
+  geom_vline(xintercept = 1.5:4.5, linetype = "dotted", color = "grey40") +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 3) +
+  geom_text(aes(label = paste0(round(100 * taux, 1), "%")),
+            vjust = -0.8, size = 4) +
+  scale_y_continuous(labels = scales::percent_format(), limits = c(0, 1)) +
+  scale_color_manual(values = c(
+    "Taux de gestes réalisés" = "#377eb8",
+    "Taux de pédagogie perçue (4-5)" = "forestgreen"
+  )) +
+  labs(
+    title = "Taux de gestes et pédagogie (4–5) selon la self-estime de sortie",
+    x = "Self-estime de sortie",
+    y = "Taux (%)",
+    color = NULL
+  ) +
+  common_theme +
+  theme(legend.position = "top") +
+  coord_cartesian(clip = "off")
+
+plot_combined
+
+# Export
+ggsave("taux_geste_et_pedagogie_par_self_estime.svg",
+       plot = plot_combined, width = w, height = h, dpi = dpi, units = "in")
+
+####
+# Fusion des deux dataframes sur SELF_ESTIME_SORTIE
+df_both <- df_taux %>%
+  select(SELF_ESTIME_SORTIE, taux_yes) %>%
+  left_join(
+    df_pedago_self %>% select(SELF_ESTIME_SORTIE, taux_pedago),
+    by = "SELF_ESTIME_SORTIE"
+  ) %>%
+  pivot_longer(
+    cols = c(taux_yes, taux_pedago),
+    names_to = "type",
+    values_to = "taux"
+  ) %>%
+  mutate(
+    type = recode(type,
+                  "taux_yes" = "Taux de gestes réalisés",
+                  "taux_pedago" = "Taux de pédagogie perçue (4-5)")
+  )
+
+# Plot combiné
+plot_combined <- ggplot(df_both, aes(x = SELF_ESTIME_SORTIE, y = taux, group = type, color = type)) +
+  # Fond pastel par bande
+  geom_rect(
+    data = unique(df_both["SELF_ESTIME_SORTIE"]),
+    aes(
+      xmin = as.numeric(SELF_ESTIME_SORTIE) - 0.5,
+      xmax = as.numeric(SELF_ESTIME_SORTIE) + 0.5,
+      ymin = -Inf, ymax = Inf
+    ),
+    inherit.aes = FALSE,
+    fill = rep(fill_pastel, each = 2)[seq_along(unique(df_both$SELF_ESTIME_SORTIE))],
+    alpha = 0.2
+  ) +
+  geom_vline(xintercept = 1.5:4.5, linetype = "dotted", color = "grey40") +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 3) +
+  geom_text(aes(label = paste0(round(100 * taux, 1), "%")),
+            vjust = -0.8, size = 4) +
+  scale_y_continuous(labels = scales::percent_format(), limits = c(0, 1)) +
+  scale_color_manual(values = c(
+    "Taux de gestes réalisés" = "#377eb8",
+    "Taux de pédagogie perçue (4-5)" = "forestgreen"
+  )) +
+  labs(
+    title = "Taux de gestes et pédagogie (4–5) selon la self-estime de sortie",
+    x = "Self-estime de sortie",
+    y = "Taux (%)",
+    color = NULL
+  ) +
+  common_theme +
+  theme(legend.position = "top") +
+  coord_cartesian(clip = "off")
+
+plot_combined
+
+# Export
+ggsave("taux_geste_et_pedagogie_par_self_estime.svg",
+       plot = plot_combined, width = w, height = h, dpi = dpi, units = "in")
+
+
+#**----COLINEARITE ENTRE PEDAGOGIE ET GESTE----**
 
 
 

@@ -282,3 +282,5 @@ rsconnect::deployApp(
   appName = "calculateur-logbook-v1"  # <- ou autre nom unique
 )
 
+
+
