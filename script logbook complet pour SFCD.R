@@ -6,9 +6,9 @@ library(ClaudeR)
 
 # Installation des packages nécessaires
 install.packages(c(
-  "cardx", "dplyr", "readxl", "openxlsx", "tidyverse", "gtsummary",
+  "cardx", "dplyr", "readxl", "openxlsx", "tidyverse", "gtsummary", "stringr",
   "magrittr", "ggplot2", "lubridate", "ggpubr", "survival", "scales",
-  "survminer", "summarytools", "MatchIt", "optmatch", "purr",
+  "survminer", "summarytools", "MatchIt", "optmatch", "purrr",
   "officer", "flextable", "gt", "mice", "googlesheets4", "cards",
   "RItools", "epiR", "tableone", "cobalt", "broom", "forcats", "dlstats", "pkgsearch", "pROC", "stats",
   "parameters", "broom.helpers", "forestplot", "kableExtra", "rsconnect", "pacman", "stringr", "knitr", "purr", "lubridate"
@@ -5005,23 +5005,38 @@ tableau_final_operateurs
 ##--------------------------------------------
 ##-------LANCEMENT APPLICATIONS SHINY--------
 library(shiny)
-# Sauvegarde du dataframe dans les deux applications Shiny
+# Sauvegarde dans le dossier courant
+saveRDS(df, file = "logbook_data.rds")
+
+# Sauvegarde dans les 3 dossiers spécifiques (Macbook)
 saveRDS(df, file = "/Users/thomashusson/Documents/R/Logbook/appinternespourcentages/logbook_data.rds")
 saveRDS(df, file = "/Users/thomashusson/Documents/R/Logbook/appcarte/logbook_data.rds")
 saveRDS(df, file = "/Users/thomashusson/Documents/R/Logbook/app1/logbook_data.rds")
 
-saveRDS(df, "logbook_data.rds")
+# Sauvegarde dans les 3 applis (Ubuntu)
+saveRDS(df, file = "/home/thomas-husson/Documents/R/Logbook/appinternespourcentages/logbook_data.rds")
+saveRDS(df, file = "/home/thomas-husson/Documents/R/Logbook/appcarte/logbook_data.rds")
+saveRDS(df, file = "/home/thomas-husson/Documents/R/Logbook/app1/logbook_data.rds")
+
 
 #lancements apps
 # Configuration du compte (à faire une fois)
 rsconnect::setAccountInfo(name='thomas-husson', token='F86928AE3B04B208C12CFF5F5324B05F', secret='E9teWbmpEpRdaNFdP5gJYZKnNJDh8nOJIcM0XtXG')
 
-# Déploiement suivi logbook
+# Déploiement suivi logbook (Mac)
 rsconnect::deployApp(
   appDir = "/Users/thomashusson/Documents/R/Logbook/appinternespourcentages",
   appName = "SuiviLogbook",
   launch.browser = TRUE
 )
+
+# Déploiement suivi logbook (Ubuntu)
+rsconnect::deployApp(
+  appDir = "/home/thomas-husson/Documents/R/Logbook/appinternespourcentages/",
+  appName = "SuiviLogbook",
+  launch.browser = TRUE
+)
+
 
 # Déploiement carte-logbook-v1
 rsconnect::deployApp(
