@@ -103,6 +103,9 @@ system("git push --force origin main")
 ##-------IMPORT DES DONNÉES + NETTOYAGE-----
 rm(list=ls())
 
+#ggsheets deauth
+gs4_deauth()
+
 import_and_clean_logbook_data <- function() {
   
   # Configuration des URLs Google Sheets
