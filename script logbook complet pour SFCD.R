@@ -228,6 +228,10 @@ import_and_clean_logbook_data <- function() {
 #import de tout le df
 df <- import_and_clean_logbook_data()
 
+#faire un df uniquement pour Paul Brousse
+df_PBR <- df %>%
+  filter(Hôpital == "Paul_Brousse")
+
 
 
 ##--------------------------------------------
