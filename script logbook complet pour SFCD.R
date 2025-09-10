@@ -376,6 +376,29 @@ tbl_garde_programme <- df %>%
 
 tbl_garde_programme
 ##--------------------------------------------
+##-------SEXE DES INTERNES------
+df <- df %>%
+  dplyr::mutate(
+    sexe_interne = dplyr::case_when(
+      NOM_interne %in% c("Pauline","Mathilde","Charlotte","Laya","Clara",
+                         "Ioanna","Léa","Martina","Sukaynah","Gabrielle",
+                         "Chloé","Alice","Philippine","Ghita","Mélanie",
+                         "Christiana","Marie Amélie","Eymeline","Imane","Anais") ~ "Femme",
+      NOM_interne %in% c("Rodolphe","Aubin","Edoardo","Marc Anthony","Thomas",
+                         "Antoine","Bilal","Kevin","François","Axel","Yassine","Ghada") ~ "Homme",
+      TRUE ~ NA_charavcter_
+    )
+  )
+
+# Tableau récapitulatif unique
+tableau_sexe <- df %>%
+  dplyr::select(NOM_interne, sexe_interne) %>%
+  dplyr::distinct() %>%
+  dplyr::count(sexe_interne)
+
+tableau_sexe
+
+##--------------------------------------------
 ##-------TAUX DE GESTE PAR INTERNE-------
 #**------PAR INTERNE-------**
 # 1. Correction du nom Gaby -> Gabrielle
