@@ -383,10 +383,10 @@ df <- df %>%
       NOM_interne %in% c("Pauline","Mathilde","Charlotte","Laya","Clara",
                          "Ioanna","Léa","Martina","Sukaynah","Gabrielle",
                          "Chloé","Alice","Philippine","Ghita","Mélanie",
-                         "Christiana","Marie Amélie","Eymeline","Imane","Anais") ~ "Femme",
+                         "Christiana","Marie Amélie","Eymeline","Imane","Anais", "Célimène") ~ "Femme",
       NOM_interne %in% c("Rodolphe","Aubin","Edoardo","Marc Anthony","Thomas",
                          "Antoine","Bilal","Kevin","François","Axel","Yassine","Ghada") ~ "Homme",
-      TRUE ~ NA_charavcter_
+      TRUE ~ NA_character_
     )
   )
 
@@ -419,6 +419,7 @@ df <- df %>%
       NOM_interne == "Charlotte" ~ 2,
       NOM_interne == "Chloé" ~ 4,
       NOM_interne == "Clara" ~ 2,
+      NOM_interne == "Célimène" ~ 1,
       NOM_interne == "François" ~ 2,
       NOM_interne == "Gabrielle" ~ 3,
       NOM_interne == "Kevin" ~ 4,
