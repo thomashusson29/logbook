@@ -377,6 +377,13 @@ tbl_garde_programme <- df %>%
 tbl_garde_programme
 ##--------------------------------------------
 ##-------SEXE DES INTERNES------
+
+mapping_operateur <- readRDS("mapping_operateur.rds")
+
+df <- df %>%
+  left_join(mapping_operateur, by = "OPERATEUR")
+
+
 df <- df %>%
   dplyr::mutate(
     sexe_interne = dplyr::case_when(

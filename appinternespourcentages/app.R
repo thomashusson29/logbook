@@ -82,9 +82,13 @@
   liste_noms <- liste_noms[!is.na(liste_noms)]
   liste_noms <- sort(liste_noms)
   
+  # nettoyer les prénoms pour login/mdp
+  liste_noms_clean <- tolower(stringi::stri_trans_general(liste_noms, "Latin-ASCII"))
+  liste_noms_clean <- gsub("[^a-z]", "", liste_noms_clean)
+  
   credentials <- data.frame(
-    user = c("admin", tolower(gsub("[^a-zA-Z]", "", liste_noms))),
-    password = c("admin", tolower(gsub("[^a-zA-Z]", "", liste_noms))),  # Prénom en minuscules
+    user        = c("admin", liste_noms_clean),
+    password    = c("admin", liste_noms_clean),
     nom_interne = c(NA_character_, liste_noms),
     stringsAsFactors = FALSE
   )

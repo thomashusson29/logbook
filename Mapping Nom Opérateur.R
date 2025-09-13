@@ -72,10 +72,20 @@ mapping_operateur <- run_label_operateurs(df$OPERATEUR)
 df <- df %>%
   left_join(mapping_operateur, by = "OPERATEUR")
 
+saveRDS(mapping_operateur, "mapping_operateur.rds")
+
+mapping_operateur <- readRDS("mapping_operateur.rds")
+
+df <- df %>%
+  left_join(mapping_operateur, by = "OPERATEUR")
+
+setdiff(unique(df$OPERATEUR), mapping_operateur$OPERATEUR)
+
+
+
 # 3) (Optionnel) Récapitulatif des seniors uniques par sexe
 df %>%
   select(OPERATEUR, sexe_operateur) %>%
   distinct() %>%
   count(sexe_operateur)
-
 
