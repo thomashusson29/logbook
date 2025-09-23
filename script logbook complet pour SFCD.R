@@ -280,6 +280,9 @@ library(ggpattern)   # pour les hachures
 library(gridExtra)   # pour grid.arrange
 library(grid)        # pour textGrob
 
+
+
+
 # Préparation des données pour les camemberts
 df_garde_camembert <- df %>%
   filter(!is.na(Garde_Programme), !is.na(Geste)) %>%
@@ -375,6 +378,15 @@ tbl_garde_programme <- df %>%
   italicize_levels()
 
 tbl_garde_programme
+
+#pourcentage d'interventions faites en garde ou en programmé
+df %>%
+  filter(!is.na(Garde_Programme)) %>%
+  count(Garde_Programme) %>%
+  mutate(pourcentage = n / sum(n),
+         label = paste0(round(100 * pourcentage, 1), "%"))
+
+
 ##--------------------------------------------
 ##-------SEXE DES INTERNES------
 
@@ -404,6 +416,17 @@ tableau_sexe <- df %>%
   dplyr::count(sexe_interne)
 
 tableau_sexe
+
+#transfeormer sexe NA en sexe "Homme"
+df <- df %>%
+  mutate(sexe_interne = ifelse(is.na(sexe_interne), "Homme", sexe_interne))
+
+#effectif interventions par sexe
+df %>%
+  filter(!is.na(sexe_interne)) %>%
+  count(sexe_interne) %>%
+  mutate(pourcentage = n / sum(n),
+         label = paste0(round(100 * pourcentage, 1), "%"))
 
 ##--------------------------------------------
 ##-------TAUX DE GESTE PAR INTERNE-------
@@ -605,6 +628,36 @@ plot2
 # Sauvegarde
 ggsave("plot1_garde_vs_programme.png", plot = plot1, width = 9, height = 5, units = "in", dpi = 300)
 ggsave("plot2_avec_tout_confondu.png", plot = plot2, width = 9, height = 5, units = "in", dpi = 300)
+
+#effectif par années DES
+effectif_par_annee <- df %>%
+  filter(!is.na(annee_DES)) %>%
+  group_by(annee_DES) %>%
+  summarise(effectif = n(), .groups = 'drop')
+
+print(effectif_par_annee)
+
+#nom_interne par années DES
+nom_interne_par_annee <- df %>%
+  filter(!is.na(annee_DES)) %>%
+  distinct(NOM_interne, annee_DES) %>%
+  arrange(annee_DES)
+print(nom_interne_par_annee)
+
+#nombre interne par années DES
+nombre_interne_par_annee <- df %>%
+  filter(!is.na(annee_DES)) %>%
+  distinct(NOM_interne, annee_DES) %>%
+  group_by(annee_DES) %>%
+  summarise(nombre_internes = n(), .groups = 'drop')
+print(nombre_interne_par_annee)
+
+#effectif interventions par années DES
+df %>%
+  filter(!is.na(annee_DES)) %>%
+  count(annee_DES) %>%
+  mutate(pourcentage = n / sum(n),
+         label = paste0(round(100 * pourcentage, 1), "%"))
 
 
 ##--------------------------------------------
@@ -4177,6 +4230,13 @@ df_taux <- df_clean %>%
     .groups = "drop"
   )
 
+#filtrer les NA 
+df_taux <- df_taux %>% filter(!is.na(SELF_ESTIME_SORTIE))
+
+#filtrer les NA sur taux de geste aussi (info dans df$Geste)
+df_taux <- df_taux %>% filter(!is.na(taux_yes))
+
+
 ## --- Couleurs pastel
 fill_pastel <- c(
   "1-je suis un mauvais humain" = "#f768a1",
@@ -4216,6 +4276,8 @@ plot_taux_self <- ggplot(df_taux, aes(x = SELF_ESTIME_SORTIE, y = taux_yes, grou
   coord_cartesian(clip = "off")
 
 plot_taux_self
+
+
 
 ## --- Export
 ggsave("taux_gestes_par_self_estime.svg",
@@ -5120,6 +5182,372 @@ print(classement_pedagogie %>% head(10))
 
 print("\n=== TOP 10 - AMBIANCE ===")
 print(classement_ambiance %>% head(10))
+
+#répartition des opérateurs selon RANG_BOSS
+repartition_rang_boss <- df %>%
+  filter(!is.na(OPERATEUR), !is.na(RANG_BOSS)) %>%
+  group_by(OPERATEUR, RANG_BOSS) %>%
+  summarise(nombre_interventions = n(), .groups = 'drop') %>%
+  group_by(OPERATEUR) %>%
+  mutate(pourcentage = round((nombre_interventions / sum(nombre_interventions)) * 100, 2)) %>%
+  arrange(OPERATEUR, desc(pourcentage))
+
+print("\n=== RÉPARTITION DES OPÉRATEURS SELON RANG_BOSS ===")
+print(repartition_rang_boss, n=200)
+
+suppressPackageStartupMessages({library(dplyr); library(readr)})
+
+
+
+
+#APP répartition
+# ---- App Shiny : unifier RANG_BOSS par opérateur (radio + auto-save) 
+# PRÉREQUIS : un objet df en mémoire avec colonnes OPERATEUR et RANG_BOSS
+
+suppressPackageStartupMessages({
+  library(shiny)
+  library(dplyr)
+  library(readr)
+  library(stringr)
+  library(tidyr)
+})
+
+# petite fonction "mode" pour proposer un rang par défaut
+.mode_chr <- function(x) {
+  x <- x[!is.na(x) & x != ""]
+  if (!length(x)) return(NA_character_)
+  tb <- sort(table(x), decreasing = TRUE)
+  top <- tb[tb == max(tb)]
+  sort(names(top))[1]
+}
+
+# données de base
+stopifnot(all(c("OPERATEUR","RANG_BOSS") %in% names(df)))
+ops <- df %>%
+  filter(!is.na(OPERATEUR), OPERATEUR != "") %>%
+  mutate(OPERATEUR = trimws(OPERATEUR)) %>%
+  distinct(OPERATEUR) %>%
+  arrange(OPERATEUR) %>%
+  pull(OPERATEUR)
+
+rang_choices <- c("PU", "PH", "CCA", "MCU", "DJ")
+
+# synthèse pour afficher les rangs observés par opérateur
+synth <- df %>%
+  filter(!is.na(OPERATEUR), OPERATEUR != "", !is.na(RANG_BOSS), RANG_BOSS != "") %>%
+  mutate(across(c(OPERATEUR, RANG_BOSS), ~trimws(as.character(.)))) %>%
+  count(OPERATEUR, RANG_BOSS, name = "n") %>%
+  arrange(OPERATEUR, desc(n), RANG_BOSS) %>%
+  group_by(OPERATEUR) %>%
+  mutate(proposition = .mode_chr(RANG_BOSS),
+         info = paste0(RANG_BOSS, ":", n, collapse = " | ")) %>%
+  ungroup() %>%
+  distinct(OPERATEUR, proposition, info)
+
+# charge mapping existant si présent; sinon initialise avec NA (et une proposition)
+map_path <- "operateur_rang_map.csv"
+if (file.exists(map_path)) {
+  base_map <- read_csv(map_path, show_col_types = FALSE) %>%
+    mutate(across(everything(), ~trimws(as.character(.x)))) %>%
+    right_join(tibble(OPERATEUR = ops), by = "OPERATEUR") %>%
+    left_join(synth %>% select(OPERATEUR, proposition), by = "OPERATEUR") %>%
+    transmute(
+      OPERATEUR,
+      RANG_BOSS_CANONIQUE = if_else(!is.na(RANG_BOSS_CANONIQUE) & RANG_BOSS_CANONIQUE != "",
+                                    RANG_BOSS_CANONIQUE, NA_character_),
+      PROPOSITION = proposition
+    )
+} else {
+  base_map <- tibble(
+    OPERATEUR = ops
+  ) %>%
+    left_join(synth %>% select(OPERATEUR, proposition), by = "OPERATEUR") %>%
+    transmute(
+      OPERATEUR,
+      RANG_BOSS_CANONIQUE = NA_character_,
+      PROPOSITION = proposition
+    )
+}
+
+ui <- fluidPage(
+  titlePanel("Unification des RANG_BOSS (choix unique, sauvegarde automatique)"),
+  fluidRow(
+    column(5,
+           selectInput("operateur", "Opérateur :", choices = ops, width = "100%"),
+           uiOutput("observes"),
+           radioButtons("rang", "Rang retenu :", choices = rang_choices, selected = character(0)),
+           helpText("Le choix est enregistré instantanément dans operateur_rang_map.csv")
+    ),
+    column(7,
+           h4("Mapping actuel"),
+           div(style = "max-height: 60vh; overflow-y: auto;",
+               tableOutput("mapTable")),
+           br(),
+           downloadButton("dl_map", "Télécharger le mapping (CSV)")
+    )
+  )
+)
+
+server <- function(input, output, session) {
+  mapping <- reactiveVal(base_map)
+  
+  # afficher les rangs observés + proposition pour l'opérateur sélectionné
+  output$observes <- renderUI({
+    op <- req(input$operateur)
+    row <- synth %>% filter(OPERATEUR == op)
+    info <- if (nrow(row)) row$info[[1]] else "(aucun rang observé)"
+    prop <- if (nrow(row)) row$proposition[[1]] else NA_character_
+    tagList(
+      p(HTML(paste0("<b>Rangs observés :</b> ", htmltools::htmlEscape(info)))),
+      if (!is.na(prop)) tags$small(paste("Proposition :", prop)) else NULL
+    )
+  })
+  
+  # quand on change d'opérateur, on positionne le radio :
+  # 1) valeur déjà mappée si existante
+  # 2) sinon, proposition (mode observé)
+  observeEvent(input$operateur, {
+    m <- mapping()
+    op <- input$operateur
+    current <- m$RANG_BOSS_CANONIQUE[m$OPERATEUR == op]
+    prop <- m$PROPOSITION[m$OPERATEUR == op]
+    sel <- if (!is.na(current) && nzchar(current)) current else if (!is.na(prop)) prop else character(0)
+    updateRadioButtons(session, "rang", selected = sel)
+  }, ignoreInit = TRUE)
+  
+  # quand on change le radio, on met à jour le mapping et on ÉCRIT le CSV (auto-save)
+  observeEvent(input$rang, {
+    op <- req(input$operateur)
+    choix <- req(input$rang)
+    # sécurise : forcer choix dans la liste autorisée
+    if (!choix %in% rang_choices) return(NULL)
+    
+    m <- mapping()
+    m$RANG_BOSS_CANONIQUE[m$OPERATEUR == op] <- choix
+    mapping(m)
+    
+    # auto-save
+    write_csv(m %>% select(OPERATEUR, RANG_BOSS_CANONIQUE), map_path)
+    showNotification(paste0("Enregistré: ", op, " → ", choix), type = "message", duration = 1.5)
+  }, ignoreInit = TRUE)
+  
+  output$mapTable <- renderTable({
+    mapping() %>%
+      select(OPERATEUR, RANG_BOSS_CANONIQUE, PROPOSITION)
+  })
+  
+  output$dl_map <- downloadHandler(
+    filename = function() paste0("operateur_rang_map_", format(Sys.time(), "%Y%m%d-%H%M%S"), ".csv"),
+    content = function(file) {
+      readr::write_csv(mapping() %>% select(OPERATEUR, RANG_BOSS_CANONIQUE), file)
+    }
+  )
+}
+
+shinyApp(ui, server)
+
+
+
+
+
+
+
+
+
+
+suppressPackageStartupMessages({library(dplyr); library(readr); library(stringr)})
+
+map_path <- "~/Documents/R/Logbook/operateur_rang_map_20250920-083619.csv"
+
+# 1) Charge et nettoie le mapping
+rang_allowed <- c("PU","PH","CCA","MCU","DJ")
+map <- read_csv(map_path, show_col_types = FALSE) %>%
+  mutate(across(everything(), ~trimws(as.character(.x)))) %>%
+  rename_with(~"OPERATEUR", .cols = matches("^OPERATEUR$", ignore.case = TRUE)) %>%
+  rename_with(~"RANG_BOSS_CANONIQUE", .cols = matches("^RANG_BOSS_CANONIQUE$", ignore.case = TRUE)) %>%
+  mutate(RANG_BOSS_CANONIQUE = if_else(RANG_BOSS_CANONIQUE %in% rang_allowed, RANG_BOSS_CANONIQUE, NA_character_))
+
+# 2) Applique au df (sans rien écraser) → crée df$RANG_BOSS_CANONIQUE
+stopifnot(all(c("OPERATEUR","RANG_BOSS") %in% names(df)))
+df <- df %>%
+  mutate(OPERATEUR = trimws(OPERATEUR)) %>%
+  left_join(map, by = "OPERATEUR") %>%
+  mutate(
+    # si non mappé, on retombe sur le rang observé d'origine
+    RANG_BOSS_CANONIQUE = coalesce(RANG_BOSS_CANONIQUE, trimws(as.character(RANG_BOSS))),
+    # optionnel : factor ordonné
+    RANG_BOSS_CANONIQUE = factor(RANG_BOSS_CANONIQUE, levels = rang_allowed, ordered = TRUE)
+  )
+
+# 3) Petit récap utile
+cat("\n✔ Mapping appliqué depuis:", normalizePath(map_path), "\n")
+cat("  N opérateurs mappés: ", sum(!is.na(map$RANG_BOSS_CANONIQUE)), "/", nrow(map), "\n")
+cat("  N lignes df non mappées (retombées sur RANG_BOSS): ",
+    sum(is.na(read_csv(map_path, show_col_types = FALSE)$RANG_BOSS_CANONIQUE)), "\n")
+
+
+# ==== Outil de reclassement des OPERATEUR (doublons/variantes)
+# Dépendances
+suppressPackageStartupMessages({
+  library(dplyr)
+  library(readr)
+  library(stringdist)
+  library(tidyr)
+  library(purrr)
+})
+
+#effectif des opérateurs selon RANG_BOSS_CANONIQUE
+table(df$RANG_BOSS_CANONIQUE, useNA = "ifany")
+
+#nombre d'opérateurs uniques
+length(unique(df$OPERATEUR))
+length(unique(df$RANG_BOSS_CANONIQUE))
+length(unique(na.omit(df$RANG_BOSS_CANONIQUE)))
+
+#effectif des opérateurs sel on OPERATEUR_CANONIQUE
+#effectif des opérateurs sel on OPERATEUR
+table(df$OPERATEUR, useNA = "ifany")
+
+#répartition des rangs selon nombre d'opérateurs (nombre PU ; nombre CCA etc)
+table(df$RANG_BOSS_CANONIQUE, useNA = "ifany")
+#répartition des opérateurs selon RANG°_BOSS
+table(df$OPERATEUR, df$RANG_BOSS_CANONIQUE, useNA = "ifany")
+
+
+
+  
+
+
+
+
+
+# 1) Initialiser la table de correspondance à partir du df
+#    -> crée operateur_map.csv avec CANONIQUE = OPERATEUR (par défaut)
+init_operateur_map <- function(df, path = "operateur_map.csv") {
+  stopifnot("OPERATEUR" %in% names(df))
+  map <- df %>%
+    filter(!is.na(OPERATEUR), OPERATEUR != "") %>%
+    distinct(OPERATEUR) %>%
+    arrange(OPERATEUR) %>%
+    mutate(CANONIQUE = OPERATEUR)
+  write_csv(map, path)
+  message("Table de correspondance initialisée dans: ", path,
+          "\nÉdite la colonne CANONIQUE comme tu veux, puis utilise apply_operateur_map().")
+  invisible(map)
+}
+
+# 2) Suggérer des paires proches (pour repérer rapidement les doublons potentiels)
+#    - max_distance = distance de Levenshtein tolérée
+suggest_similar_operators <- function(df, max_distance = 2, min_nchar = 3) {
+  stopifnot("OPERATEUR" %in% names(df))
+  u <- df %>%
+    filter(!is.na(OPERATEUR), OPERATEUR != "") %>%
+    distinct(OPERATEUR) %>%
+    mutate(OPERATEUR = trimws(OPERATEUR)) %>%
+    filter(nchar(OPERATEUR) >= min_nchar) %>%
+    arrange(OPERATEUR) %>%
+    pull(OPERATEUR)
+  
+  if (length(u) <= 1) return(tibble(OPERATEUR_A = character(), OPERATEUR_B = character(), dist = integer()))
+  
+  idx_pairs <- combn(seq_along(u), 2)
+  dists <- stringdist::stringdist(u[idx_pairs[1, ]], u[idx_pairs[2, ]], method = "lv")
+  tibble(
+    OPERATEUR_A = u[idx_pairs[1, ]],
+    OPERATEUR_B = u[idx_pairs[2, ]],
+    dist = dists
+  ) %>%
+    arrange(dist, OPERATEUR_A, OPERATEUR_B) %>%
+    filter(dist <= max_distance)
+}
+
+# 3) Ajouter / mettre à jour une correspondance ponctuelle (programmatiquement)
+#    - old_names: vecteur des variantes à recoder
+#    - new_name:  libellé canonique souhaité
+set_mapping <- function(old_names, new_name, path = "operateur_map.csv") {
+  old_names <- unique(trimws(old_names))
+  new_name  <- trimws(new_name)
+  
+  if (!file.exists(path)) stop("Fichier de map absent. Lance d'abord init_operateur_map().")
+  
+  map <- read_csv(path, show_col_types = FALSE) %>%
+    mutate(across(everything(), ~trimws(as.character(.x))))
+  
+  # Ajoute les old_names manquants
+  to_add <- tibble(OPERATEUR = setdiff(old_names, map$OPERATEUR)) %>%
+    mutate(CANONIQUE = new_name)
+  
+  map2 <- map %>%
+    rows_update(
+      tibble(OPERATEUR = intersect(old_names, map$OPERATEUR), CANONIQUE = new_name),
+      by = "OPERATEUR",
+      unmatched = "ignore"
+    ) %>%
+    bind_rows(to_add) %>%
+    arrange(OPERATEUR)
+  
+  write_csv(map2, path)
+  message("Mapping mis à jour vers '", new_name, "' pour: ",
+          paste(old_names, collapse = ", "), "\nFichier: ", path)
+  invisible(map2)
+}
+
+# 4) Appliquer la correspondance au df
+#    - crée/écrase la colonne OPERATEUR_CANONIQUE
+#    - option overwrite = TRUE pour écraser df$OPERATEUR (si vraiment souhaité)
+apply_operateur_map <- function(df, path = "operateur_map.csv", overwrite = FALSE) {
+  if (!file.exists(path)) stop("Fichier de map absent. Lance init_operateur_map() puis édite le CSV.")
+  
+  map <- read_csv(path, show_col_types = FALSE) %>%
+    mutate(across(everything(), ~trimws(as.character(.x))))
+  
+  stopifnot(all(c("OPERATEUR", "CANONIQUE") %in% names(map)))
+  stopifnot("OPERATEUR" %in% names(df))
+  
+  out <- df %>%
+    mutate(OPERATEUR = trimws(OPERATEUR)) %>%
+    left_join(map, by = "OPERATEUR") %>%
+    mutate(OPERATEUR_CANONIQUE = if_else(!is.na(CANONIQUE) & CANONIQUE != "", CANONIQUE, OPERATEUR)) %>%
+    select(-CANONIQUE)
+  
+  if (overwrite) {
+    out <- out %>%
+      mutate(OPERATEUR = OPERATEUR_CANONIQUE)
+  }
+  out
+}
+
+# 5) (Optionnel) Vérifier ce qui reste non mappé (si tu veux forcer la complétude)
+check_unmapped <- function(df, path = "operateur_map.csv") {
+  if (!file.exists(path)) stop("Fichier de map absent. Lance init_operateur_map() d'abord.")
+  map <- read_csv(path, show_col_types = FALSE) %>%
+    mutate(across(everything(), ~trimws(as.character(.x))))
+  df %>%
+    filter(!is.na(OPERATEUR), OPERATEUR != "") %>%
+    mutate(OPERATEUR = trimws(OPERATEUR)) %>%
+    distinct(OPERATEUR) %>%
+    anti_join(map %>% select(OPERATEUR), by = "OPERATEUR") %>%
+    arrange(OPERATEUR)
+}
+
+# ===================== EXEMPLE D’UTILISATION
+# 1) À faire une première fois pour créer le CSV :
+# init_operateur_map(df)  # -> édite ensuite "operateur_map.csv" à la main si tu veux
+
+# 2) (Optionnel) Voir les doublons probables :
+# suggest_similar_operators(df, max_distance = 2)
+
+# 3) Ajouter quelques règles rapides par code, par ex. :
+# set_mapping(c("Benedetti, Lardinois", "Benedetti"), "Benedetti")
+# set_mapping(c("Cherqui", "Cherqui "), "Cherqui")
+# set_mapping(c("Côme"), "Come")
+
+# 4) Appliquer au df (sans écraser l’original)
+# df <- apply_operateur_map(df, overwrite = FALSE)
+
+# 5) (Optionnel) Forcer l’écrasement si tu veux l’utiliser partout :
+# df <- apply_operateur_map(df, overwrite = TRUE)
+
 
 # Pour accéder aux dataframes :
 tableau_final_operateurs
