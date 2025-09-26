@@ -1,3 +1,77 @@
+# =============================================================================
+# INTÉGRATION DU SEXE DES SENIORS DEPUIS mapping_operateur
+# =============================================================================
+
+library(dplyr)
+
+# MÉTHODE 1 : Jointure simple (pourc OPERATEUR principal)
+# -----------------------------------------------------------------------------
+
+# Supprimer les colonnes de sexe existantes si elles sont incorrectes
+df_clean <- df %>%
+  select(-contains("sexe_operateur"))
+
+# Jointure avec mapping_operateur pour obtenir le sexe de l'opérateur principal
+df_with_sexe <- df_clean %>%
+  left_join(mapping_operateur, by = "OPERATEUR")
+
+# MÉTHODE 2 : Jointure complète (pour OPERATEUR et OPERATEUR_2)
+# -----------------------------------------------------------------------------
+
+# Si vous voulez aussi le sexe de OPERATEUR_2 (second opérateur)
+df_complete <- df_with_sexe %>%
+  left_join(mapping_operateur, 
+            by = c("OPERATEUR_2" = "OPERATEUR"),
+            suffix = c("", "_operateur2")) %>%
+  rename(sexe_operateur2 = sexe_operateur_operateur2)
+
+# VÉRIFICATIONS
+# -----------------------------------------------------------------------------
+
+# Vérifier les colonnes de sexe
+print("Colonnes de sexe disponibles :")
+colnames(df_complete)[grep("sexe", colnames(df_complete), ignore.case = TRUE)]
+
+# Vérifier les valeurs manquantes
+print("Valeurs manquantes pour sexe_operateur :")
+sum(is.na(df_complete$sexe_operateur))
+
+print("Valeurs manquantes pour sexe_operateur2 :")
+sum(is.na(df_complete$sexe_operateur2))
+
+# Aperçu des données
+print("Aperçu des données intégrées :")
+df_complete %>% 
+  select(OPERATEUR, sexe_operateur, OPERATEUR_2, sexe_operateur2, sexe_interne) %>% 
+  head(10)
+
+# Tableau de répartition par sexe des opérateurs
+print("Répartition par sexe des opérateurs principaux :")
+table(df_complete$sexe_operateur, useNA = "always")
+
+# OPTION ALTERNATIVE : Si vous ne voulez qu'une jointure simple
+# -----------------------------------------------------------------------------
+
+# Pour ne garder que l'essentiel :
+df_final <- df %>%
+  select(-contains("sexe_operateur")) %>%  # Supprimer anciennes colonnes
+  left_join(mapping_operateur, by = "OPERATEUR")
+
+# Assigner le résultat au dataframe principal
+df <- df_final
+
+print("Intégration terminée ! Le sexe des seniors est maintenant dans la colonne 'sexe_operateur'")
+
+# =============================================================================
+# RÉSUMÉ DES VARIABLES CRÉÉES :
+# - df_with_sexe : dataframe avec sexe de l'opérateur principal
+# - df_complete : dataframe avec sexe des deux opérateurs
+# - df_final : version finale simplifiée
+# =============================================================================
+
+
+
+
 # ANALYSE UNIVARIÉE ET MULTIVARIÉE - INFLUENCE DU SEXE ET DU RANG DES SENIORS
 # ============================================================================
 
@@ -748,3 +822,9 @@ print("3. Efficacité particulière des approches féminines avec les internes m
 print("4. Possible effet de mentorat croisé optimisant l'apprentissage")
 
 print("\n✅ VALIDATION STATISTIQUE COMPLÈTE RÉALISÉE")
+
+claudeAddin()
+
+
+
+

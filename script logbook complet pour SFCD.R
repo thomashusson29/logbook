@@ -1322,7 +1322,7 @@ ggplot(df_semestre_hiver, aes(x = DATE)) +
   )
 
 #refaire le même mais avec juste l'OR par mois et afficher l'IC95: 
-ggplot(df_semestre_hiver, aes(x = DATE)) +
+plot <- ggplot(df_semestre_hiver, aes(x = DATE)) +
   # Nuage de points
   geom_jitter(aes(y = Geste_bin),
               width = 5, height = 0.05,
@@ -1364,6 +1364,8 @@ ggplot(df_semestre_hiver, aes(x = DATE)) +
     panel.grid.minor = element_blank(),
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
+
+plot
 
 #refaire mais sans l'OR affiché
 ggplot(df_semestre_hiver, aes(x = DATE)) +

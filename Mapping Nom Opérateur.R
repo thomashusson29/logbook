@@ -89,3 +89,5 @@ df %>%
   distinct() %>%
   count(sexe_operateur)
 
+
+
