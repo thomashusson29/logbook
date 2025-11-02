@@ -1,0 +1,26 @@
+{
+    "id": "D0647596",
+    "path": "~/Documents/Projets/Logbook/Code/script logbook complet pour SFCD.R",
+    "project_path": "script logbook complet pour SFCD.R",
+    "type": "r_source",
+    "hash": "3747936629",
+    "contents": "",
+    "dirty": false,
+    "created": 1761950918845.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "4073,42",
+        "scrollLine": "2750"
+    },
+    "folds": "0|25|86|0|\n88|27|100|0|\n102|39|235|0|\n237|28|272|75|\n274|41|388|0|\n390|26|429|0|\n431|34|537|0|\n539|48|661|0|\n663|27|874|0|\n876|39|1413|0|\n1414|46|1414|46|\n1415|21|2748|0|\n2750|15|2962|0|\n2964|21|3201|0|\n3203|21|3353|0|\n3355|26|3497|0|\n3499|33|3638|0|\n3640|23|3886|0|\n3887|46|3887|46|\n3888|18|4072|0|\n4074|27|4100|31|\n4102|20|4747|2|\n4749|17|4785|0|\n4787|74|4936|11|\n4938|12|5063|0|\n5065|32|5558|49|\n5560|37|5610|0|\n",
+    "lastKnownWriteTime": 1758728582,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1761951939501,
+    "read_only": false,
+    "read_only_alternatives": []
+}

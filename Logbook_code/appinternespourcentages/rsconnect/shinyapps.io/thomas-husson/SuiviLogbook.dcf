@@ -1,0 +1,10 @@
+name: SuiviLogbook
+title:
+username: thomas-husson
+account: thomas-husson
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 15140142
+bundleId: 11112157
+url: https://thomas-husson.shinyapps.io/SuiviLogbook/
+version: 1
