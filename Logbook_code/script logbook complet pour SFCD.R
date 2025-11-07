@@ -116,7 +116,8 @@ import_and_clean_logbook_data <- function() {
     HEGP = "https://docs.google.com/spreadsheets/d/1gXd9f2ZID3VL5oTTQ0j_JxtYjk9fb9C2s1LmTBhvTJg/edit?usp=sharing",
     PSL = "https://docs.google.com/spreadsheets/d/1CAfPAdzhKSbARkMZagJE5gmLMwAJn5WN4N3dJgijedE/edit?gid=0#gid=0",
     Cochin2 = "https://docs.google.com/spreadsheets/d/1bd7WkoZrHbfW3AhFfZgxgzCjJ7cv0tDgHUZ7BIahjoE/edit?gid=0#gid=0",
-    Avicenne = "https://docs.google.com/spreadsheets/d/1XTiRmVf7B_bVcfF53AwKRXC8WrEiKe0O-UUcmfrVnws/edit?gid=0#gid=0"
+    Avicenne = "https://docs.google.com/spreadsheets/d/1XTiRmVf7B_bVcfF53AwKRXC8WrEiKe0O-UUcmfrVnws/edit?gid=0#gid=0",
+    St_Antoine = "https://docs.google.com/spreadsheets/d/1J67SU6hM6oKASHcAZkF00wazlESRluplK1V24c1mDsM/edit?gid=0#gid=0"
   )
   
   # Colonnes standardisées
@@ -444,6 +445,7 @@ df <- df %>%
     annee_DES = case_when(
       # Années fixes (pas de variation par hôpital)
       NOM_interne == "Alice" ~ 4,
+      NOM_interne == "Andrius" ~ 4,
       NOM_interne == "Antoine" ~ 3,
       NOM_interne == "Aubin" ~ 2,
       NOM_interne == "Charlotte" ~ 2,
